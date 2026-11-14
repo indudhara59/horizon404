@@ -16,6 +16,33 @@ in a few clicks. For any site and date range it shows where the **Sun** and **Ea
 Tools like Quickmap, Moon Trek and JPL Horizons hold this information but are built for specialists.
 Horizon404 aims for **Horizons-grade answers in three clicks**.
 
+## Features
+
+- **Explore:** pick a curated site (south-pole Artemis regions, IM-1, Apollo, Chandrayaan-3, Chang'e-4 and more),
+  type coordinates, or click anywhere on a shaded-relief LOLA map of the south pole.
+- **Sky view from the lander:** a 360° panorama of the real terrain skyline with the Sun's and Earth's paths and a
+  play/scrub timeline, so you can *see* the Sun skimming the ridge line and Earth bobbing behind hills.
+- **Mission metrics:** power + comms %, sunlight %, Earth-in-view %, time to sunset/sunrise and Earthset/Earthrise,
+  longest night, longest comms blackout, solar power index.
+- **Operational windows:** Gantt bands for sunlight, Earth visibility and both together.
+- **Best landing dates:** power + comms for a 14-day mission starting on every day of the next 12 months; click a bar
+  to load that date.
+- **Compare:** up to four site/date scenarios side by side on a common "days after landing" axis, which answers
+  "our launch slipped two weeks, is the site still OK?" directly.
+- **Learn:** why the south pole is so hard, in plain language, plus the method.
+
+### Results for 2026 (one year, 2 m mast)
+
+| Site | Sunlit | Earth in view | Power + comms |
+|---|---|---|---|
+| Shackleton connecting ridge | 86.6 % | 51.8 % | 45.8 % |
+| Malapert Massif summit | 71.0 % | 73.2 % | 47.6 % |
+| Mons Mouton summit | 59.6 % | 100 % | 59.6 % |
+| Geographic south pole | 36.2 % | 39.3 % | 14.2 % |
+| Shackleton crater floor | 0 % | 0 % | 0 % |
+| Apollo 11 (reference) | 51.5 % | 100 % | 51.5 % |
+| Chang'e-4, far side (reference) | 49.6 % | 0 % | 0 % |
+
 ## How it works
 
 1. **Ephemeris:** Sun and Earth azimuth/elevation from any selenographic lat/lon, computed with
@@ -27,18 +54,41 @@ Horizon404 aims for **Horizons-grade answers in three clicks**.
    spherical Moon (curvature included, no atmosphere), max per 1° azimuth bin. ~0.1 s per site.
    Sanity checks: Shackleton crater floor is permanently shadowed (walls ~21° high), and the
    Shackleton connecting ridge is sunlit **82 %** of 2026, in line with published ~80–90 %.
-3. **Visibility & metrics** *(in progress)*: Sun/Earth are "up" only when above the terrain horizon.
+3. **Visibility & metrics:** the visible fraction of the solar disk above the skyline drives power; Earth's
+   centre above the skyline means direct-to-Earth comms. Durations, longest gaps and windows are derived
+   from the time series. A full lunar day takes ~0.2 s; ranking 365 landing dates takes ~0.05 s.
+
+## Architecture
+
+```
+backend/   Python · Skyfield · NumPy · FastAPI
+  horizon404/ephem.py       Sun & Earth az/el from a lunar site (DE421 + lunar ME frame)
+  horizon404/dem.py         LOLA polar-stereographic DEM reader
+  horizon404/horizon.py     terrain skyline ray caster
+  horizon404/visibility.py  metrics, windows, best-date finder
+  horizon404/api.py         /api/sites · /api/analyze · /api/horizon · /api/best-dates
+frontend/  React · TypeScript · Vite · Plotly
+```
 
 ## Run locally
 
 ```bash
+# backend
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m scripts.download_dem     # LOLA south-pole DEM, ~116 MB
-python -m pytest -q tests          # downloads ~17 MB of JPL kernels on first run
-python -m scripts.validate_horizons  # optional: re-check against JPL Horizons
+python -m scripts.download_dem       # LOLA south-pole DEM, ~116 MB
+python -m pytest -q tests            # downloads ~17 MB of JPL kernels on first run
+uvicorn horizon404.api:app --port 8000
+
+# frontend (second terminal)
+cd frontend
+npm install
+npm run dev                          # http://localhost:5173 (set VITE_API_URL to point elsewhere)
 ```
+
+Optional: `python -m scripts.validate_horizons` re-checks the ephemeris against JPL Horizons, and
+`python -m scripts.make_basemap` regenerates the shaded-relief map from the DEM.
 
 ## Data sources
 
