@@ -1,4 +1,0 @@
-# Runtime dependencies for the Vercel serverless API (see backend/requirements.txt for dev)
-skyfield==1.49
-numpy>=2.0
-fastapi>=0.110
