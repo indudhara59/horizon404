@@ -4,6 +4,8 @@
 
 **NASA Space Apps Challenge 2026 · Team Orbit404 · Challenge: Lunar Landing Site Navigator**
 
+**Live demo: https://horizon404.vercel.app**
+
 Horizon404 lets mission planners, educators and the public compare lunar landing sites and dates
 in a few clicks. For any site and date range it shows where the **Sun** and **Earth** sit relative to the
 **real terrain horizon**, and turns that into the numbers that decide a mission:
