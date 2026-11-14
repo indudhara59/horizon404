@@ -1,15 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { api } from '../lib/api'
 import type { Analysis, Selection, Site } from '../lib/types'
 import { fmtDuration, fmtLatLon } from '../lib/util'
 import Timeline from './Timeline'
 
-interface Scenario {
+export interface Scenario {
   sel: Selection
   start: string
 }
 
+/** Scenario list + results, owned by App so they survive switching tabs. */
+export interface CompareStore {
+  scen: Scenario[]
+  setScen: Dispatch<SetStateAction<Scenario[]>>
+  results: Record<string, Analysis>
+  setResults: Dispatch<SetStateAction<Record<string, Analysis>>>
+}
+
 interface Props {
+  store: CompareStore
   sites: Site[]
   current: Selection | null
   start: string
@@ -24,9 +33,8 @@ function shiftDate(d: string, days: number): string {
   return t.toISOString().slice(0, 10)
 }
 
-export default function Compare({ sites, current, start, days }: Props) {
-  const [scen, setScen] = useState<Scenario[]>([])
-  const [results, setResults] = useState<Record<string, Analysis>>({})
+export default function Compare({ sites, current, start, days, store }: Props) {
+  const { scen, setScen, results, setResults } = store
   const [err, setErr] = useState<string | null>(null)
   const [pickId, setPickId] = useState(sites[0]?.id ?? '')
   const [pickDate, setPickDate] = useState(start)

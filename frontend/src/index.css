@@ -151,3 +151,5 @@ footer { margin-top: 22px; text-align: center; color: var(--muted); font-size: 1
   .card.hero { grid-column: span 2; }
 }
 .scen-num { color: var(--accent); font-family: "JetBrains Mono", monospace; margin-right: 4px; }
+.head-actions { display: flex; align-items: center; gap: 10px; }
+.head-actions button { white-space: nowrap; font-size: 13px; }

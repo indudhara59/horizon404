@@ -1,6 +1,6 @@
 import type { Config } from 'plotly.js'
 import createPlotlyComponent from 'react-plotly.js/factory'
-import Plotly from 'plotly.js-dist-min'
+import Plotly from 'plotly.js-basic-dist-min'
 
 // react-plotly.js is CommonJS; handle both interop shapes.
 const factory =

@@ -20,6 +20,7 @@ from functools import lru_cache
 import numpy as np
 
 from .dem import MOON_RADIUS_M, load_dem
+from .ephem import clamp_lat
 
 AZ_BINS = 360  # 1° resolution
 RAYS_PER_BIN = 2  # 0.5° ray spacing
@@ -83,15 +84,15 @@ def _destination(lat0, lon0, az, dist):
 def horizon_mask(
     lat: float, lon: float, observer_height_m: float = 2.0
 ) -> HorizonMask:
-    lat, lon = round(float(lat), 5), round(float(lon) % 360.0, 5)
+    lat, lon = round(clamp_lat(lat), 5), round(float(lon) % 360.0, 5)
     dem = load_dem()
+    h_site = float(dem.height_at(lat, lon)) if dem.covers(lat) else float("nan")
 
-    if not dem.covers(lat):
+    if not np.isfinite(h_site):
         # No terrain data: smooth sphere, skyline is (just below) 0°.
         return HorizonMask(lat, lon, 0.0, observer_height_m,
                            np.zeros(AZ_BINS), terrain=False, complete=False)
 
-    h_site = float(dem.height_at(lat, lon))
     r_obs = MOON_RADIUS_M + h_site + observer_height_m
 
     n_rays = AZ_BINS * RAYS_PER_BIN

@@ -25,6 +25,14 @@ KERNEL_DIR = Path(__file__).resolve().parent.parent / "data" / "kernels"
 SUN_ANGULAR_RADIUS_DEG = 0.2666
 EARTH_ANGULAR_RADIUS_DEG = 0.95
 
+# Azimuth is undefined exactly at a pole; nudge sites ~30 m off it so the
+# sky directions and the terrain skyline share a well-defined north.
+MAX_ABS_LAT_DEG = 89.999
+
+
+def clamp_lat(lat: float) -> float:
+    return max(-MAX_ABS_LAT_DEG, min(MAX_ABS_LAT_DEG, float(lat)))
+
 
 @dataclass(frozen=True)
 class SkyTrack:
@@ -85,7 +93,7 @@ def sky_track(
     times = time_grid(start, days, step_minutes)
     t = ts.from_datetimes(times)
 
-    site = eph["moon"] + pc.build_latlon_degrees(frame, lat_deg, lon_deg)
+    site = eph["moon"] + pc.build_latlon_degrees(frame, clamp_lat(lat_deg), lon_deg)
 
     sun_alt, sun_az, _ = site.at(t).observe(eph["sun"]).apparent().altaz()
     earth_alt, earth_az, _ = site.at(t).observe(eph["earth"]).apparent().altaz()

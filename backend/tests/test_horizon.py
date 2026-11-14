@@ -54,3 +54,13 @@ def test_mask_wraps_around_north():
 def test_outside_dem_is_flat():
     m = horizon_mask(0.674, 23.473)  # Apollo 11
     assert not m.terrain and np.all(m.elevation_deg == 0)
+
+
+def test_exact_pole_matches_nearby_point():
+    from horizon404.visibility import analyze
+
+    t0 = datetime(2026, 11, 14)
+    a = analyze(-90.0, 0.0, t0, days=14, include_track=False)["metrics"]
+    b = analyze(-89.999, 0.0, t0, days=14, include_track=False)["metrics"]
+    assert a["power_and_comms_pct"] == b["power_and_comms_pct"]
+    assert a["earth_visible_pct"] == b["earth_visible_pct"]

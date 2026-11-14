@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import BestDates from './components/BestDates'
-import Compare from './components/Compare'
+import Compare, { type CompareStore } from './components/Compare'
 import Learn from './components/Learn'
 import MetricCards from './components/MetricCards'
 import PoleMap from './components/PoleMap'
@@ -21,13 +21,34 @@ const WINDOWS = [
 ]
 const MISSION_DAYS = 14
 const today = new Date().toISOString().slice(0, 10)
+const TABS: Tab[] = ['explore', 'compare', 'learn']
+
+/** Shareable state lives in the URL: ?tab=…&site=id | lat=…&lon=…, &date=…&days=… */
+function readUrl() {
+  const q = new URLSearchParams(window.location.search)
+  const num = (k: string) => {
+    const v = q.get(k)
+    return v !== null && v !== '' && Number.isFinite(+v) ? +v : null
+  }
+  const date = q.get('date')
+  const days = num('days')
+  return {
+    tab: (TABS as string[]).includes(q.get('tab') ?? '') ? (q.get('tab') as Tab) : 'explore',
+    site: q.get('site'),
+    lat: num('lat'),
+    lon: num('lon'),
+    date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= '1900-01-01' && date <= '2049-12-31' ? date : null,
+    days: days !== null && WINDOWS.some((w) => w.days === days) ? days : null,
+  }
+}
+const initial = readUrl()
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('explore')
+  const [tab, setTab] = useState<Tab>(initial.tab)
   const [sites, setSites] = useState<Site[]>([])
   const [sel, setSel] = useState<Selection | null>(null)
-  const [start, setStart] = useState(today)
-  const [days, setDays] = useState(29.53)
+  const [start, setStart] = useState(initial.date ?? today)
+  const [days, setDays] = useState(initial.days ?? 29.53)
   const [a, setA] = useState<Analysis | null>(null)
   const [best, setBest] = useState<BestDate[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -36,14 +57,19 @@ export default function App() {
   const [playing, setPlaying] = useState(false)
   const [latIn, setLatIn] = useState('')
   const [lonIn, setLonIn] = useState('')
+  const [scen, setScen] = useState<CompareStore['scen']>([])
+  const [results, setResults] = useState<CompareStore['results']>({})
 
   useEffect(() => {
     api
       .sites()
       .then((s) => {
         setSites(s)
-        const first = s[0]
-        setSel({ name: first.name, lat: first.lat, lon: first.lon, note: first.note })
+        const fromUrl = s.find((x) => x.id === initial.site)
+        if (fromUrl) setSel({ name: fromUrl.name, lat: fromUrl.lat, lon: fromUrl.lon, note: fromUrl.note })
+        else if (initial.lat !== null && initial.lon !== null && Math.abs(initial.lat) <= 90)
+          setSel({ name: 'Custom site', lat: initial.lat, lon: ((initial.lon % 360) + 360) % 360 })
+        else setSel({ name: s[0].name, lat: s[0].lat, lon: s[0].lon, note: s[0].note })
       })
       .catch(() => setErr('Cannot reach the Horizon404 API. Is the backend running?'))
   }, [])
@@ -55,20 +81,32 @@ export default function App() {
     setLoading(true)
     setErr(null)
     setPlaying(false)
+    let stale = false // ignore answers to requests that were superseded
     api
       .analyze(sel.lat, sel.lon, `${start}T00:00:00Z`, days)
       .then((r) => {
+        if (stale) return
         setA(r)
         setIdx(0)
       })
-      .catch((e: Error) => setErr(e.message))
-      .finally(() => setLoading(false))
+      .catch((e: Error) => !stale && setErr(e.message))
+      .finally(() => !stale && setLoading(false))
+    return () => {
+      stale = true
+    }
   }, [sel, start, days])
 
   useEffect(() => {
     if (!sel) return
     setBest(null)
-    api.bestDates(sel.lat, sel.lon, today, MISSION_DAYS).then(setBest).catch(() => setBest(null))
+    let stale = false
+    api
+      .bestDates(sel.lat, sel.lon, today, MISSION_DAYS)
+      .then((b) => !stale && setBest(b))
+      .catch(() => !stale && setBest(null))
+    return () => {
+      stale = true
+    }
   }, [sel])
 
   const n = a?.track?.times.length ?? 0
@@ -82,6 +120,32 @@ export default function App() {
     () => sites.find((s) => sel && s.lat === sel.lat && s.lon === sel.lon),
     [sites, sel],
   )
+  // keep the URL in sync so any view can be shared as a link
+  useEffect(() => {
+    if (!sel) return
+    const q = new URLSearchParams()
+    if (tab !== 'explore') q.set('tab', tab)
+    if (siteInfo) q.set('site', siteInfo.id)
+    else {
+      q.set('lat', String(+sel.lat.toFixed(4)))
+      q.set('lon', String(+sel.lon.toFixed(4)))
+    }
+    q.set('date', start)
+    q.set('days', String(days))
+    window.history.replaceState(null, '', `?${q}`)
+  }, [tab, sel, siteInfo, start, days])
+
+  const [copied, setCopied] = useState(false)
+  const share = () => {
+    navigator.clipboard
+      ?.writeText(window.location.href)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1600)
+      })
+      .catch(() => undefined)
+  }
+
   const groups = useMemo(() => [...new Set(sites.map((s) => s.group))], [sites])
 
   const pickSite = (id: string) => {
@@ -111,7 +175,7 @@ export default function App() {
           </div>
         </div>
         <nav>
-          {(['explore', 'compare', 'learn'] as Tab[]).map((x) => (
+          {TABS.map((x) => (
             <button key={x} className={tab === x ? 'active' : ''} onClick={() => setTab(x)}>
               {x === 'explore' ? 'Explore' : x === 'compare' ? 'Compare' : 'Learn'}
             </button>
@@ -123,7 +187,7 @@ export default function App() {
 
       {tab === 'learn' && <Learn />}
       {tab === 'compare' && sites.length > 0 && (
-        <Compare sites={sites} current={sel} start={start} days={days} />
+        <Compare sites={sites} current={sel} start={start} days={days} store={{ scen, setScen, results, setResults }} />
       )}
 
       {tab === 'explore' && (
@@ -181,11 +245,17 @@ export default function App() {
                   <div className="coords">
                     {fmtLatLon(sel.lat, sel.lon)}
                     {a && a.terrain && <> · terrain height {a.site_height_m.toFixed(0)} m</>}
+                    {a && a.terrain && !a.horizon.complete && <> · skyline partial (near DEM edge)</>}
                     {a && !a.terrain && <> · smooth horizon (outside polar DEM)</>}
                   </div>
                   {(sel.note ?? siteInfo?.note) && <p className="note">{sel.note ?? siteInfo?.note}</p>}
                 </div>
-                {loading && <div className="spinner" aria-label="loading" />}
+                <div className="head-actions">
+                  {loading && <div className="spinner" aria-label="loading" />}
+                  <button className="ghost" onClick={share} title="Copy a link to this site, date and window">
+                    {copied ? '✓ Link copied' : '🔗 Share'}
+                  </button>
+                </div>
               </div>
             )}
 

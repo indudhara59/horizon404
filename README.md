@@ -32,6 +32,8 @@ Horizon404 aims for **Horizons-grade answers in three clicks**.
 - **Compare:** up to four site/date scenarios side by side on a common "days after landing" axis, which answers
   "our launch slipped two weeks, is the site still OK?" directly.
 - **Learn:** why the south pole is so hard, in plain language, plus the method.
+- **Shareable links:** the URL holds the site, date, window and tab, so any view can be sent as a link
+  (e.g. `?site=malapert-massif&date=2026-12-01&days=14`).
 
 ### Results for 2026 (one year, 2 m mast)
 
