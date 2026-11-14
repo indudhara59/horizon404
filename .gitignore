@@ -4,11 +4,8 @@ __pycache__/
 .venv/
 .pytest_cache/
 
-# Large data (downloaded by scripts)
-backend/data/kernels/
+# Raw DEM (downloaded by scripts; a packed copy lives in backend/data/dem_packed)
 backend/data/dem/
-*.bsp
-*.bpc
 *.tif
 *.img
 
@@ -20,3 +17,6 @@ frontend/dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Vercel
+.vercel/

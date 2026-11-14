@@ -5,12 +5,13 @@ from datetime import datetime
 import numpy as np
 import pytest
 
-from horizon404.dem import DEM_DIR, load_dem
+from horizon404.dem import DEM_DIR, PACKED_DIR, load_dem
 from horizon404.ephem import sky_track
 from horizon404.horizon import horizon_mask
 
 pytestmark = pytest.mark.skipif(
-    not (DEM_DIR / "ldem_75s_120m.img").exists(),
+    not (DEM_DIR / "ldem_75s_120m.img").exists()
+    and not list(PACKED_DIR.glob("ldem_75s_120m.*.zlib")),
     reason="LOLA DEM not downloaded (python -m scripts.download_dem)",
 )
 

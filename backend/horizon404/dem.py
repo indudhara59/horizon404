@@ -11,6 +11,8 @@ Projection follows the PDS DSMAP_POLAR definition (spherical, true at pole):
 
 from __future__ import annotations
 
+import zlib
+
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -18,6 +20,9 @@ from pathlib import Path
 import numpy as np
 
 DEM_DIR = Path(__file__).resolve().parent.parent / "data" / "dem"
+# Lossless compressed copy (row-delta + zlib, split in parts) small enough for git
+# and serverless bundles; see scripts/pack_dem.py.
+PACKED_DIR = DEM_DIR.parent / "dem_packed"
 MOON_RADIUS_M = 1_737_400.0
 PDS_URL = (
     "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/"
@@ -80,12 +85,14 @@ class PolarDEM:
 
 @lru_cache(maxsize=2)
 def load_dem(name: str = "ldem_75s_120m") -> PolarDEM:
-    lbl = (DEM_DIR / f"{name}.lbl").read_text()
     img = DEM_DIR / f"{name}.img"
-    if not img.exists():
+    packed = sorted(PACKED_DIR.glob(f"{name}.*.zlib"))
+    if not img.exists() and not packed:
         raise FileNotFoundError(
             f"{img} missing — run: python -m scripts.download_dem {name}"
         )
+    lbl_path = DEM_DIR / f"{name}.lbl"
+    lbl = (lbl_path if lbl_path.exists() else PACKED_DIR / f"{name}.lbl").read_text()
 
     def field(key: str) -> float:
         for line in lbl.splitlines():
@@ -94,7 +101,10 @@ def load_dem(name: str = "ldem_75s_120m") -> PolarDEM:
         raise KeyError(key)
 
     n = int(field("LINES"))
-    heights = np.memmap(img, dtype="<i2", mode="r", shape=(n, n))
+    if img.exists():
+        heights = np.memmap(img, dtype="<i2", mode="r", shape=(n, n))
+    else:
+        heights = unpack(packed, n)
     return PolarDEM(
         heights=heights,
         scale_m=field("MAP_SCALE"),
@@ -102,3 +112,12 @@ def load_dem(name: str = "ldem_75s_120m") -> PolarDEM:
         dn_scale=field("SCALING_FACTOR"),
         min_lat=field("MAXIMUM_LATITUDE"),
     )
+
+
+def unpack(parts: list[Path], n: int) -> np.ndarray:
+    """Rebuild the int16 DEM from row-delta zlib parts (~0.3 s)."""
+    rows = [
+        np.frombuffer(zlib.decompress(p.read_bytes()), dtype="<i2").reshape(-1, n)
+        for p in parts
+    ]
+    return np.cumsum(np.vstack(rows), axis=1, dtype=np.int16)

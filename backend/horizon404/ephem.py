@@ -50,7 +50,8 @@ class SkyTrack:
 @lru_cache(maxsize=1)
 def _context():
     """Load (and download once) the ephemeris and lunar frame kernels."""
-    KERNEL_DIR.mkdir(parents=True, exist_ok=True)
+    if not KERNEL_DIR.exists():  # read-only filesystems (serverless) ship the kernels
+        KERNEL_DIR.mkdir(parents=True)
     load = Loader(str(KERNEL_DIR), verbose=False)
     ts = load.timescale()
     eph = load("de421.bsp")
