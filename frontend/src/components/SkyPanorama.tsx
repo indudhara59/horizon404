@@ -83,7 +83,7 @@ export default function SkyPanorama({ a, index }: Props) {
         hovermode: 'closest',
       }}
       config={plotConfig}
-      style={{ width: '100%' }}
+      style={{ width: '100%', height: 340 }}
       useResizeHandler
     />
   )

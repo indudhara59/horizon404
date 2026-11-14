@@ -47,7 +47,7 @@ export default function BestDates({ data, missionDays, selected, onPick }: Props
           const x = e.points?.[0]?.x
           if (typeof x === 'string') onPick(x.slice(0, 10))
         }}
-        style={{ width: '100%' }}
+        style={{ width: '100%', height: 220 }}
         useResizeHandler
       />
     </div>

@@ -107,7 +107,7 @@ export default function PoleMap({ sites, selected, onPick }: Props) {
         config={{ ...plotConfig, scrollZoom: false, modeBarButtonsToAdd: [] }}
         onInitialized={(_, el) => (gd.current = el)}
         onUpdate={(_, el) => (gd.current = el)}
-        style={{ width: '100%' }}
+        style={{ width: '100%', height: 420 }}
         useResizeHandler
       />
     </div>

@@ -65,13 +65,15 @@ export default function Timeline({ rows, cursor, height }: Props) {
     })
   }
 
+  const h = height ?? 70 + tickVals.length * 34
+
   return (
     <Plot
       data={[{ x: [start, end], y: [0, 0], mode: 'markers', marker: { opacity: 0 }, hoverinfo: 'skip', showlegend: false }]}
       layout={{
         ...baseLayout,
         margin: { ...baseLayout.margin, l: multi ? 150 : 110 },
-        height: height ?? 70 + tickVals.length * 34,
+        height: h,
         shapes,
         xaxis: multi
           ? { type: 'linear', range: [start, end], gridcolor: COLORS.grid, title: { text: 'Days after landing' } }
@@ -83,7 +85,7 @@ export default function Timeline({ rows, cursor, height }: Props) {
         hovermode: false,
       }}
       config={plotConfig}
-      style={{ width: '100%' }}
+      style={{ width: '100%', height: h }}
       useResizeHandler
     />
   )
