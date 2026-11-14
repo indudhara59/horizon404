@@ -1,0 +1,6 @@
+skyfield==1.49
+numpy>=2.0
+fastapi>=0.110
+uvicorn[standard]>=0.29
+requests>=2.31
+pytest>=8.0

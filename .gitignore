@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Large data (downloaded by scripts)
+backend/data/kernels/
+backend/data/dem/
+*.bsp
+*.bpc
+*.tif
+*.img
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
