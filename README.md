@@ -77,8 +77,7 @@ frontend/  React · TypeScript · Vite · Plotly
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m scripts.download_dem       # LOLA south-pole DEM, ~116 MB
-python -m pytest -q tests            # downloads ~17 MB of JPL kernels on first run
+python -m pytest -q tests            # JPL kernels + packed LOLA DEM ship in backend/data
 uvicorn horizon404.api:app --port 8000
 
 # frontend (second terminal)
@@ -86,6 +85,13 @@ cd frontend
 npm install
 npm run dev                          # http://localhost:5173 (set VITE_API_URL to point elsewhere)
 ```
+
+Deployment: `vercel.json` deploys the frontend and the FastAPI backend as two Vercel services on one
+domain (`/` and `/api`). The `Dockerfile` builds the same app as a single container for any other host.
+
+The raw LOLA DEM (116 MB) is too big for git, so `backend/data/dem_packed/` holds a lossless
+row-delta + zlib copy (59 MB, unpacks in 0.3 s); `python -m scripts.download_dem` fetches the
+original from PDS and `python -m scripts.pack_dem` rebuilds the packed copy.
 
 Optional: `python -m scripts.validate_horizons` re-checks the ephemeris against JPL Horizons, and
 `python -m scripts.make_basemap` regenerates the shaded-relief map from the DEM.
