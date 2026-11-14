@@ -1,4 +1,4 @@
-import type { Analysis, BestDate, LayerSet, Site, TerrainPatch } from './types'
+import type { Analysis, BestDate, LayerSet, PoleMovie, Site, TerrainPatch, YearCodes } from './types'
 
 export const API_URL: string =
   (import.meta.env.VITE_API_URL as string | undefined) ??
@@ -28,6 +28,14 @@ export const api = {
     }),
   bestDates: (lat: number, lon: number, start: string, missionDays = 14, height = 2) =>
     get<BestDate[]>('/api/best-dates', { lat, lon, start, months: 12, mission_days: missionDays, height }),
+  year: (lat: number, lon: number, start: string, height = 2) =>
+    get<YearCodes>('/api/year', { lat, lon, start, height }),
+  movie: async (): Promise<{ meta: PoleMovie; frames: Uint8Array }> => {
+    const base = `${import.meta.env.BASE_URL}movie/`
+    const [m, f] = await Promise.all([fetch(`${base}movie.json`), fetch(`${base}frames.bin`)])
+    if (!m.ok || !f.ok) throw new Error('pole movie unavailable')
+    return { meta: (await m.json()) as PoleMovie, frames: new Uint8Array(await f.arrayBuffer()) }
+  },
   terrain: (lat: number, lon: number, halfKm = 20) => get<TerrainPatch>('/api/terrain', { lat, lon, half_km: halfKm }),
   layers: async (): Promise<LayerSet> => {
     const r = await fetch(`${import.meta.env.BASE_URL}layers/layers.json`)

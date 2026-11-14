@@ -116,3 +116,22 @@ export interface TerrainPatch {
   max_m: number
   heights: number[] // metres relative to the site, row 0 = north edge, west to east
 }
+
+export interface YearCodes {
+  start: string
+  step_hours: number
+  days: number
+  terrain: boolean
+  codes: string // one char per hour: 0 dark, 1 sun only, 2 Earth only, 3 both
+}
+
+export interface PoleMovie {
+  start: string
+  step_hours: number
+  frames: number
+  n: number
+  half_km: number
+  bytes_per_frame: number
+  lit_pct: number[]
+  sites: { id: string; name: string; x_km: number; y_km: number }[]
+}

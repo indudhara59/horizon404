@@ -23,6 +23,12 @@ Horizon404 aims for **Horizons-grade answers in three clicks**.
 - **3D terrain, real sunlight:** a 40 × 40 km LOLA terrain model around the site, lit by the computed Sun with
   real-time shadows and synced to the timeline: press Play and watch shadows sweep across Shackleton.
   Orbit freely or switch to **Lander's eye** to look around from the mast top.
+- **🎬 Light-and-shadow movie of the south pole:** sunlight sweeping across an 80 × 80 km area through a lunar
+  day, computed on a 0.5 km grid (26,000 points × 119 frames). Craters that never light up are the
+  permanently shadowed regions where water ice survives. Click any spot to analyse it.
+- **📊 Year at a glance:** every hour of the next 12 months as one pixel (day × hour), coloured by power + comms /
+  sunlight only / Earth only / dark, so each site's seasonal "fingerprint" is visible at a glance. Click a day to
+  land then.
 - **Live now:** follow the real clock and see where the Sun and Earth are at the site right now.
 - **Suitability maps:** colour layers over the south pole for **power + comms**, **sunlight**, **Earth in view**
   (12 months, 13,400-point grid computed with the full engine) and **terrain slope**, with hover readout.
@@ -83,7 +89,7 @@ backend/   Python · Skyfield · NumPy · FastAPI
   horizon404/horizon.py     terrain skyline ray caster
   horizon404/visibility.py  metrics, windows, best-date finder
   horizon404/terrain.py     local terrain patch for the 3D view
-  horizon404/api.py         /api/sites · /api/analyze · /api/horizon · /api/best-dates · /api/terrain
+  horizon404/api.py         /api/sites · /api/analyze · /api/horizon · /api/best-dates · /api/terrain · /api/year
 frontend/  React · TypeScript · Vite · Plotly · Three.js
 ```
 
@@ -109,6 +115,8 @@ domain (`/` and `/api`). The `Dockerfile` builds the same app as a single contai
 The raw LOLA DEM (116 MB) is too big for git, so `backend/data/dem_packed/` holds a lossless
 row-delta + zlib copy (59 MB, unpacks in 0.3 s); `python -m scripts.download_dem` fetches the
 original from PDS and `python -m scripts.pack_dem` rebuilds the packed copy.
+
+Movie: `python -m scripts.make_movie` recomputes `frontend/public/movie/` (~3 min).
 
 Map layers: `python -m scripts.make_layers` recomputes `frontend/public/layers/` (~3 min on 10 cores;
 `--restyle` re-renders the images from the stored values).

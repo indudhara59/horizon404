@@ -171,3 +171,27 @@ def best_dates(
             "sunlit_pct": round(float(sun_csum[i + win] - sun_csum[i]) / win * 100, 1),
         })
     return results
+
+
+def year_codes(
+    lat: float, lon: float, start: datetime, days: float = 365.0, observer_height_m: float = 2.0
+) -> dict:
+    """Hourly state over a year as one character per hour, for the year barcode.
+
+    0 = dark and no Earth, 1 = sunlit only, 2 = Earth only, 3 = sunlit + Earth.
+    """
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+    mask = horizon_mask(lat, lon, observer_height_m)
+    tr = sky_track(lat, lon, start, days, 60.0)
+    sunlit = disk_fraction(tr.sun_el - mask.at(tr.sun_az), SUN_ANGULAR_RADIUS_DEG) > DARK_THRESHOLD
+    earth = tr.earth_el > mask.at(tr.earth_az)
+    codes = (sunlit.astype(np.uint8) + 2 * earth.astype(np.uint8))[:-1]  # drop the closing sample
+    return {
+        "start": tr.to_dict()["times"][0],
+        "step_hours": 1,
+        "days": int(days),
+        "terrain": mask.terrain,
+        "codes": "".join(map(str, codes.tolist())),
+    }

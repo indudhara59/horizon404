@@ -6,6 +6,8 @@ import MetricCards from './components/MetricCards'
 import PoleMap, { type MapLayer } from './components/PoleMap'
 import SkyPanorama from './components/SkyPanorama'
 import Timeline from './components/Timeline'
+import PoleMovie from './components/PoleMovie'
+import YearBarcode from './components/YearBarcode'
 
 const Terrain3D = lazy(() => import('./components/Terrain3D'))
 import { api } from './lib/api'
@@ -417,6 +419,16 @@ export default function App() {
                   <Timeline rows={[{ label: sel?.name ?? '', a }]} cursor={now} />
                 </div>
 
+                {sel && (
+                  <div className="panel">
+                    <div className="panel-head">
+                      <h3>Year at a glance</h3>
+                      <span className="hint">every hour of the next 12 months · {mast} m mast</span>
+                    </div>
+                    <YearBarcode lat={sel.lat} lon={sel.lon} mast={mast} start={today} selected={start} onPick={(d) => { setStart(d); setLive(false) }} />
+                  </div>
+                )}
+
                 <div className="panel">
                   <div className="panel-head">
                     <h3>Best landing dates, next 12 months</h3>
@@ -430,6 +442,14 @@ export default function App() {
                 </div>
               </>
             )}
+
+            <div className="panel">
+              <div className="panel-head">
+                <h3>🎬 Light and shadow at the south pole</h3>
+                <span className="hint">one lunar day, animated</span>
+              </div>
+              <PoleMovie selected={sel} onPick={setSel} onSite={pickSite} />
+            </div>
           </section>
         </main>
       )}

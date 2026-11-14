@@ -35,3 +35,10 @@ def test_terrain_patch():
     assert len(t["heights"]) == t["n"] ** 2
     assert t["heights"][len(t["heights"]) // 2] == 0  # site at the centre, height 0
     assert client.get("/api/terrain", params={"lat": 0, "lon": 0}).status_code == 404
+
+
+def test_year_codes():
+    r = client.get("/api/year", params={"lat": 0.6741, "lon": 23.473, "start": "2026-11-14"})
+    d = r.json()
+    assert len(d["codes"]) == 365 * 24
+    assert set(d["codes"]) <= {"2", "3"}  # Apollo 11: Earth always up, Sun ~half the time

@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from .horizon import horizon_mask
 from .sites import BY_ID, SITES
 from .terrain import local_terrain
-from .visibility import analyze, best_dates
+from .visibility import analyze, best_dates, year_codes
 
 app = FastAPI(title="Horizon404 API", version="0.1.0")
 app.add_middleware(
@@ -52,6 +52,12 @@ def sites():
 @app.get("/api/horizon")
 def horizon(lat: float = Lat, lon: float = Lon, height: float = Query(2.0, ge=0, le=100)):
     return horizon_mask(lat, lon, height).to_dict()
+
+
+@app.get("/api/year")
+def year(lat: float = Lat, lon: float = Lon, start: str | None = None,
+         height: float = Query(2.0, ge=0, le=100)):
+    return year_codes(lat, lon, _parse_start(start), 365.0, height)
 
 
 @app.get("/api/terrain")
