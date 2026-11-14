@@ -26,3 +26,12 @@ def test_bad_start():
 def test_best_dates():
     r = client.get("/api/best-dates", params={"lat": 0.6741, "lon": 23.473, "start": "2026-11-14", "months": 1})
     assert r.status_code == 200 and len(r.json()) == 30
+
+
+def test_terrain_patch():
+    r = client.get("/api/terrain", params={"lat": -89.45, "lon": 222.69, "half_km": 10})
+    assert r.status_code == 200
+    t = r.json()
+    assert len(t["heights"]) == t["n"] ** 2
+    assert t["heights"][len(t["heights"]) // 2] == 0  # site at the centre, height 0
+    assert client.get("/api/terrain", params={"lat": 0, "lon": 0}).status_code == 404

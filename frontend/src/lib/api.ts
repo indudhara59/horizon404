@@ -1,4 +1,4 @@
-import type { Analysis, BestDate, LayerSet, Site } from './types'
+import type { Analysis, BestDate, LayerSet, Site, TerrainPatch } from './types'
 
 export const API_URL: string =
   (import.meta.env.VITE_API_URL as string | undefined) ??
@@ -28,6 +28,7 @@ export const api = {
     }),
   bestDates: (lat: number, lon: number, start: string, missionDays = 14, height = 2) =>
     get<BestDate[]>('/api/best-dates', { lat, lon, start, months: 12, mission_days: missionDays, height }),
+  terrain: (lat: number, lon: number, halfKm = 20) => get<TerrainPatch>('/api/terrain', { lat, lon, half_km: halfKm }),
   layers: async (): Promise<LayerSet> => {
     const r = await fetch(`${import.meta.env.BASE_URL}layers/layers.json`)
     if (!r.ok) throw new Error('map layers unavailable')

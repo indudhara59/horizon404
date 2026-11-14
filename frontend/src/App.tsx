@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import BestDates from './components/BestDates'
 import Compare, { type CompareStore } from './components/Compare'
 import Learn from './components/Learn'
@@ -6,6 +6,8 @@ import MetricCards from './components/MetricCards'
 import PoleMap, { type MapLayer } from './components/PoleMap'
 import SkyPanorama from './components/SkyPanorama'
 import Timeline from './components/Timeline'
+
+const Terrain3D = lazy(() => import('./components/Terrain3D'))
 import { api } from './lib/api'
 import type { Analysis, BestDate, Selection, Site } from './lib/types'
 import { downloadCsv, fmtLatLon, fmtTime } from './lib/util'
@@ -71,6 +73,8 @@ export default function App() {
   const [mast, setMast] = useState(initial.mast)
   const [battery, setBattery] = useState(initial.battery)
   const [layer, setLayer] = useState<MapLayer>(initial.layer)
+  const [skyMode, setSkyMode] = useState<'sky' | '3d'>('sky')
+  const [live, setLive] = useState(false)
   const [scen, setScen] = useState<CompareStore['scen']>([])
   const [results, setResults] = useState<CompareStore['results']>({})
 
@@ -126,9 +130,31 @@ export default function App() {
   const n = a?.track?.times.length ?? 0
   useEffect(() => {
     if (!playing || n === 0) return
-    const id = setInterval(() => setIdx((i) => (i + 1) % n), 70)
+    const id = setInterval(() => setIdx((i) => (i + 1) % n), skyMode === '3d' ? 120 : 70)
     return () => clearInterval(id)
-  }, [playing, n])
+  }, [playing, n, skyMode])
+
+  // Live mode: follow the real clock. The window must contain "now", so it starts today.
+  useEffect(() => {
+    if (!live) return
+    if (start !== today) {
+      setStart(today)
+      return
+    }
+    if (!a?.track) return
+    const t0 = new Date(a.window.start).getTime()
+    const stepMs = a.window.step_minutes * 60e3
+    const tick = () => setIdx(Math.max(0, Math.min(n - 1, Math.round((Date.now() - t0) / stepMs))))
+    tick()
+    const id = setInterval(tick, 20e3)
+    return () => clearInterval(id)
+  }, [live, a, start, n])
+  const [clock, setClock] = useState(() => new Date())
+  useEffect(() => {
+    if (!live) return
+    const id = setInterval(() => setClock(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [live])
 
   const siteInfo = useMemo(
     () => sites.find((s) => sel && s.lat === sel.lat && s.lon === sel.lon),
@@ -203,6 +229,10 @@ export default function App() {
     } else setErr('Latitude must be between -90 and 90; longitude in degrees east.')
   }
 
+  useEffect(() => {
+    if (a && !a.terrain && skyMode === '3d') setSkyMode('sky')
+  }, [a, skyMode])
+
   const t = a?.track
   const now = t ? t.times[idx] : undefined
 
@@ -271,7 +301,7 @@ export default function App() {
             <div className="row">
               <div>
                 <label>Landing date (UTC)</label>
-                <input type="date" value={start} min="1900-01-01" max="2049-12-31" onChange={(e) => e.target.value && setStart(e.target.value)} />
+                <input type="date" value={start} min="1900-01-01" max="2049-12-31" onChange={(e) => { if (e.target.value) { setStart(e.target.value); setLive(false) } }} />
               </div>
               <div>
                 <label>Window</label>
@@ -335,14 +365,36 @@ export default function App() {
 
                 <div className="panel">
                   <div className="panel-head">
-                    <h3>Sky view from the lander</h3>
-                    <span className="hint">grey = terrain skyline · faded dots = behind terrain</span>
+                    <h3>{skyMode === 'sky' ? 'Sky view from the lander' : '3D terrain, real sunlight'}</h3>
+                    <div className="layer-switch tight">
+                      <button className={skyMode === 'sky' ? 'active' : ''} onClick={() => setSkyMode('sky')}>360° sky</button>
+                      <button className={skyMode === '3d' ? 'active' : ''} onClick={() => setSkyMode('3d')} disabled={!a.terrain} title={a.terrain ? '' : 'Needs a south-pole site (LOLA terrain)'}>
+                        🏔️ 3D terrain
+                      </button>
+                    </div>
                   </div>
-                  {t && <SkyPanorama a={a} index={idx} />}
+                  {t && skyMode === 'sky' && (
+                    <>
+                      <span className="hint">grey = terrain skyline · faded dots = behind terrain</span>
+                      <SkyPanorama a={a} index={idx} />
+                    </>
+                  )}
+                  {t && skyMode === '3d' && a.terrain && sel && (
+                    <Suspense fallback={<div className="hint">Loading 3D engine…</div>}>
+                      <Terrain3D
+                        lat={sel.lat} lon={sel.lon} mast={mast}
+                        sunAz={t.sun_az[idx]} sunEl={t.sun_el[idx]} sunFrac={t.sun_fraction[idx]}
+                        earthAz={t.earth_az[idx]} earthEl={t.earth_el[idx]} earthVisible={t.earth_visible[idx]}
+                      />
+                    </Suspense>
+                  )}
                   {t && (
                     <div className="scrubber">
-                      <button onClick={() => setPlaying(!playing)}>{playing ? '❚❚ Pause' : '▶ Play'}</button>
-                      <input type="range" min={0} max={n - 1} value={idx} onChange={(e) => { setIdx(+e.target.value); setPlaying(false) }} />
+                      <button onClick={() => { setLive(false); setPlaying(!playing) }}>{playing ? '❚❚ Pause' : '▶ Play'}</button>
+                      <button className={`live-btn ${live ? 'on' : ''}`} onClick={() => { setPlaying(false); setLive(!live) }} title="Follow the real clock">
+                        <span className="dot" /> {live ? `LIVE ${clock.toISOString().slice(11, 19)} UTC` : 'Live now'}
+                      </button>
+                      <input type="range" min={0} max={n - 1} value={idx} onChange={(e) => { setIdx(+e.target.value); setPlaying(false); setLive(false) }} />
                       <span className="mono">{now && fmtTime(now)}</span>
                       <span className={`chip ${t.sun_fraction[idx] > 0.01 ? 'on-sun' : 'off'}`}>
                         ☀️ {t.sun_fraction[idx] > 0.99 ? 'full Sun' : t.sun_fraction[idx] > 0.01 ? `${Math.round(t.sun_fraction[idx] * 100)}% of disk` : 'dark'}

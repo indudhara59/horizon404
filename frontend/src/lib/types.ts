@@ -105,3 +105,14 @@ export interface LayerSet {
   image_extent: { x: [number, number]; y: [number, number] }
   layers: Record<LayerKey, Layer>
 }
+
+export interface TerrainPatch {
+  lat: number
+  lon: number
+  half_km: number
+  n: number
+  site_height_m: number
+  min_m: number
+  max_m: number
+  heights: number[] // metres relative to the site, row 0 = north edge, west to east
+}

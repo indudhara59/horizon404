@@ -20,6 +20,10 @@ Horizon404 aims for **Horizons-grade answers in three clicks**.
 
 ## Features
 
+- **3D terrain, real sunlight:** a 40 × 40 km LOLA terrain model around the site, lit by the computed Sun with
+  real-time shadows and synced to the timeline: press Play and watch shadows sweep across Shackleton.
+  Orbit freely or switch to **Lander's eye** to look around from the mast top.
+- **Live now:** follow the real clock and see where the Sun and Earth are at the site right now.
 - **Suitability maps:** colour layers over the south pole for **power + comms**, **sunlight**, **Earth in view**
   (12 months, 13,400-point grid computed with the full engine) and **terrain slope**, with hover readout.
 - **Landing safety:** slope at the site from LOLA, rated against the ~8–10° lander limit. IM-1 Odysseus,
@@ -78,8 +82,9 @@ backend/   Python · Skyfield · NumPy · FastAPI
   horizon404/dem.py         LOLA polar-stereographic DEM reader
   horizon404/horizon.py     terrain skyline ray caster
   horizon404/visibility.py  metrics, windows, best-date finder
-  horizon404/api.py         /api/sites · /api/analyze · /api/horizon · /api/best-dates
-frontend/  React · TypeScript · Vite · Plotly
+  horizon404/terrain.py     local terrain patch for the 3D view
+  horizon404/api.py         /api/sites · /api/analyze · /api/horizon · /api/best-dates · /api/terrain
+frontend/  React · TypeScript · Vite · Plotly · Three.js
 ```
 
 ## Run locally

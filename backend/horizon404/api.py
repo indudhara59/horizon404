@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .horizon import horizon_mask
 from .sites import BY_ID, SITES
+from .terrain import local_terrain
 from .visibility import analyze, best_dates
 
 app = FastAPI(title="Horizon404 API", version="0.1.0")
@@ -51,6 +52,14 @@ def sites():
 @app.get("/api/horizon")
 def horizon(lat: float = Lat, lon: float = Lon, height: float = Query(2.0, ge=0, le=100)):
     return horizon_mask(lat, lon, height).to_dict()
+
+
+@app.get("/api/terrain")
+def terrain(lat: float = Lat, lon: float = Lon, half_km: float = Query(20, ge=2, le=40)):
+    t = local_terrain(round(lat, 5), round(lon % 360, 5), half_km)
+    if t is None:
+        raise HTTPException(404, "3D terrain is available for south-pole sites (75°S to the pole)")
+    return t
 
 
 @app.get("/api/analyze")
