@@ -22,8 +22,11 @@ Horizon404 aims for **Horizons-grade answers in three clicks**.
    [Skyfield](https://rhodesmill.org/skyfield/) using the JPL DE421 ephemeris and the NAIF lunar
    Mean-Earth frame (libration included). Validated against **JPL Horizons**: max difference
    **0.00001°** (see `backend/scripts/validate_horizons.py`).
-2. **Terrain horizon** *(in progress)*: a horizon mask built from the LOLA south-pole elevation model,
-   one value per degree of azimuth, accounting for lunar curvature.
+2. **Terrain horizon:** a skyline mask built from the LOLA `LDEM_75S_120M` south-pole elevation
+   model (75°S–pole, 120 m/px). 720 great-circle rays out to 200 km, exact elevation angles on a
+   spherical Moon (curvature included, no atmosphere), max per 1° azimuth bin. ~0.1 s per site.
+   Sanity checks: Shackleton crater floor is permanently shadowed (walls ~21° high), and the
+   Shackleton connecting ridge is sunlit **82 %** of 2026, in line with published ~80–90 %.
 3. **Visibility & metrics** *(in progress)*: Sun/Earth are "up" only when above the terrain horizon.
 
 ## Run locally
@@ -32,6 +35,7 @@ Horizon404 aims for **Horizons-grade answers in three clicks**.
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+python -m scripts.download_dem     # LOLA south-pole DEM, ~116 MB
 python -m pytest -q tests          # downloads ~17 MB of JPL kernels on first run
 python -m scripts.validate_horizons  # optional: re-check against JPL Horizons
 ```
