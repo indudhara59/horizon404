@@ -1,5 +1,5 @@
 # Horizon404: one container serving the FastAPI backend and the built React app.
-# Used for the Hugging Face Space (port 7860). Build locally with:
+# Listens on $PORT (Render, Cloud Run, ...) or 7860 by default. Build locally with:
 #   docker build -t horizon404 . && docker run -p 7860:7860 horizon404
 
 # ---- frontend build ----
@@ -29,4 +29,4 @@ COPY --from=web /web/dist /app/frontend/dist
 
 USER user
 EXPOSE 7860
-CMD ["uvicorn", "horizon404.api:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn horizon404.api:app --host 0.0.0.0 --port ${PORT:-7860}"]
