@@ -1,7 +1,8 @@
 import type { Analysis, BestDate, Site } from './types'
 
 export const API_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  (import.meta.env.DEV ? 'http://localhost:8000' : '') // production: same origin
 
 async function get<T>(path: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
   const q = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))

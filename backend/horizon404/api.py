@@ -5,10 +5,13 @@ Run:  uvicorn horizon404.api:app --reload --port 8000
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .horizon import horizon_mask
 from .sites import BY_ID, SITES
@@ -82,3 +85,9 @@ def best(
     mission_days: float = Query(14, gt=0, le=60),
 ):
     return best_dates(lat, lon, _parse_start(start), months, mission_days)
+
+
+# Serve the built React app from the same origin when it is present (Docker / Hugging Face Space).
+STATIC_DIR = Path(os.environ.get("HORIZON404_STATIC", Path(__file__).resolve().parents[2] / "frontend" / "dist"))
+if STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="web")
