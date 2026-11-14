@@ -20,6 +20,14 @@ Horizon404 aims for **Horizons-grade answers in three clicks**.
 
 ## Features
 
+- **Suitability maps:** colour layers over the south pole for **power + comms**, **sunlight**, **Earth in view**
+  (12 months, 13,400-point grid computed with the full engine) and **terrain slope**, with hover readout.
+- **Landing safety:** slope at the site from LOLA, rated against the ~8–10° lander limit. IM-1 Odysseus,
+  which tipped over in 2024, sits on 11.6°.
+- **Mission settings:** mast height (2–20 m) for the solar panel / antenna, and battery endurance, checked
+  against the longest night.
+- **Quick questions:** one-click stories ("Why did IM-1 tip over?", "Does a taller mast help at the pole?").
+- **CSV export** of the full Sun/Earth/skyline time series.
 - **Explore:** pick a curated site (south-pole Artemis regions, IM-1, Apollo, Chandrayaan-3, Chang'e-4 and more),
   type coordinates, or click anywhere on a shaded-relief LOLA map of the south pole.
 - **Sky view from the lander:** a 360° panorama of the real terrain skyline with the Sun's and Earth's paths and a
@@ -96,6 +104,9 @@ domain (`/` and `/api`). The `Dockerfile` builds the same app as a single contai
 The raw LOLA DEM (116 MB) is too big for git, so `backend/data/dem_packed/` holds a lossless
 row-delta + zlib copy (59 MB, unpacks in 0.3 s); `python -m scripts.download_dem` fetches the
 original from PDS and `python -m scripts.pack_dem` rebuilds the packed copy.
+
+Map layers: `python -m scripts.make_layers` recomputes `frontend/public/layers/` (~3 min on 10 cores;
+`--restyle` re-renders the images from the stored values).
 
 Optional: `python -m scripts.validate_horizons` re-checks the ephemeris against JPL Horizons, and
 `python -m scripts.make_basemap` regenerates the shaded-relief map from the DEM.

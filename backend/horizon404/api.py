@@ -83,8 +83,9 @@ def best(
     start: str | None = None,
     months: int = Query(12, ge=1, le=24),
     mission_days: float = Query(14, gt=0, le=60),
+    height: float = Query(2.0, ge=0, le=100, description="observer height above terrain (m)"),
 ):
-    return best_dates(lat, lon, _parse_start(start), months, mission_days)
+    return best_dates(lat, lon, _parse_start(start), months, mission_days, observer_height_m=height)
 
 
 # Serve the built React app from the same origin when it is present (Docker / Hugging Face Space).

@@ -3,23 +3,31 @@ import BestDates from './components/BestDates'
 import Compare, { type CompareStore } from './components/Compare'
 import Learn from './components/Learn'
 import MetricCards from './components/MetricCards'
-import PoleMap from './components/PoleMap'
+import PoleMap, { type MapLayer } from './components/PoleMap'
 import SkyPanorama from './components/SkyPanorama'
 import Timeline from './components/Timeline'
 import { api } from './lib/api'
 import type { Analysis, BestDate, Selection, Site } from './lib/types'
-import { fmtLatLon, fmtTime } from './lib/util'
+import { downloadCsv, fmtLatLon, fmtTime } from './lib/util'
 
 type Tab = 'explore' | 'compare' | 'learn'
 
 const WINDOWS = [
   { days: 7, label: '1 week' },
   { days: 14, label: '2 weeks' },
-  { days: 29.53, label: '1 lunar day (29.5 d)' },
+  { days: 29.53, label: '1 lunar day' },
   { days: 90, label: '3 months' },
   { days: 365, label: '1 year' },
 ]
 const MISSION_DAYS = 14
+const MASTS = [2, 5, 10, 20]
+const BATTERIES = [
+  { h: 24, label: '1 day' },
+  { h: 72, label: '3 days' },
+  { h: 168, label: '1 week' },
+  { h: 360, label: '15 days (lunar night)' },
+]
+const LAYERS: MapLayer[] = ['relief', 'both', 'sunlit', 'earth', 'slope']
 const today = new Date().toISOString().slice(0, 10)
 const TABS: Tab[] = ['explore', 'compare', 'learn']
 
@@ -39,6 +47,9 @@ function readUrl() {
     lon: num('lon'),
     date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= '1900-01-01' && date <= '2049-12-31' ? date : null,
     days: days !== null && WINDOWS.some((w) => w.days === days) ? days : null,
+    mast: MASTS.includes(num('h') ?? -1) ? (num('h') as number) : 2,
+    battery: BATTERIES.some((b) => b.h === num('bat')) ? (num('bat') as number) : 72,
+    layer: (LAYERS as string[]).includes(q.get('layer') ?? '') ? (q.get('layer') as MapLayer) : 'relief',
   }
 }
 const initial = readUrl()
@@ -57,6 +68,9 @@ export default function App() {
   const [playing, setPlaying] = useState(false)
   const [latIn, setLatIn] = useState('')
   const [lonIn, setLonIn] = useState('')
+  const [mast, setMast] = useState(initial.mast)
+  const [battery, setBattery] = useState(initial.battery)
+  const [layer, setLayer] = useState<MapLayer>(initial.layer)
   const [scen, setScen] = useState<CompareStore['scen']>([])
   const [results, setResults] = useState<CompareStore['results']>({})
 
@@ -83,7 +97,7 @@ export default function App() {
     setPlaying(false)
     let stale = false // ignore answers to requests that were superseded
     api
-      .analyze(sel.lat, sel.lon, `${start}T00:00:00Z`, days)
+      .analyze(sel.lat, sel.lon, `${start}T00:00:00Z`, days, true, mast)
       .then((r) => {
         if (stale) return
         setA(r)
@@ -94,20 +108,20 @@ export default function App() {
     return () => {
       stale = true
     }
-  }, [sel, start, days])
+  }, [sel, start, days, mast])
 
   useEffect(() => {
     if (!sel) return
     setBest(null)
     let stale = false
     api
-      .bestDates(sel.lat, sel.lon, today, MISSION_DAYS)
+      .bestDates(sel.lat, sel.lon, today, MISSION_DAYS, mast)
       .then((b) => !stale && setBest(b))
       .catch(() => !stale && setBest(null))
     return () => {
       stale = true
     }
-  }, [sel])
+  }, [sel, mast])
 
   const n = a?.track?.times.length ?? 0
   useEffect(() => {
@@ -132,8 +146,11 @@ export default function App() {
     }
     q.set('date', start)
     q.set('days', String(days))
+    if (mast !== 2) q.set('h', String(mast))
+    if (battery !== 72) q.set('bat', String(battery))
+    if (layer !== 'relief') q.set('layer', layer)
     window.history.replaceState(null, '', `?${q}`)
-  }, [tab, sel, siteInfo, start, days])
+  }, [tab, sel, siteInfo, start, days, mast, battery, layer])
 
   const [copied, setCopied] = useState(false)
   const share = () => {
@@ -144,6 +161,31 @@ export default function App() {
         setTimeout(() => setCopied(false), 1600)
       })
       .catch(() => undefined)
+  }
+
+  /** One-click stories that show off what the tool answers. */
+  const QUESTIONS: { q: string; go: () => void }[] = [
+    { q: 'Where at the south pole is power + comms best?', go: () => { setTab('explore'); setLayer('both'); pickSite('connecting-ridge') } },
+    { q: 'Why did IM-1 Odysseus tip over?', go: () => { setTab('explore'); setLayer('slope'); pickSite('im-1') } },
+    { q: 'Launch slipped two weeks: is the site still OK?', go: () => { setTab('compare') } },
+    { q: 'Can a far-side lander talk to Earth?', go: () => { setTab('explore'); setLayer('relief'); pickSite('change-4') } },
+    { q: 'Does a taller mast help at the pole?', go: () => { setTab('explore'); setMast(20); pickSite('south-pole') } },
+  ]
+
+  const exportCsv = () => {
+    if (!a?.track || !sel) return
+    const tr = a.track
+    const rows = tr.times.map((time, i) => [
+      time, tr.sun_az[i], tr.sun_el[i], tr.sun_horizon[i], tr.sun_fraction[i],
+      tr.earth_az[i], tr.earth_el[i], tr.earth_horizon[i], tr.earth_visible[i] ? 1 : 0, tr.power_index[i],
+    ])
+    const header = ['time_utc', 'sun_az_deg', 'sun_el_deg', 'skyline_at_sun_deg', 'sun_visible_fraction',
+      'earth_az_deg', 'earth_el_deg', 'skyline_at_earth_deg', 'earth_visible', 'power_index']
+    const name = `horizon404_${(siteInfo?.id ?? `${sel.lat}_${sel.lon}`)}_${start}_${a.window.days}d.csv`
+    downloadCsv(name, [header, ...rows], [
+      `# Horizon404 · ${sel.name} · ${fmtLatLon(sel.lat, sel.lon)} · mast ${mast} m`,
+      `# Sun/Earth: JPL DE421 + NAIF lunar frame; skyline: LRO LOLA LDEM_75S_120M`,
+    ])
   }
 
   const groups = useMemo(() => [...new Set(sites.map((s) => s.group))], [sites])
@@ -185,9 +227,18 @@ export default function App() {
 
       {err && <div className="error banner">{err}</div>}
 
+      {tab !== 'learn' && (
+        <div className="questions">
+          <span className="hint">Try:</span>
+          {QUESTIONS.map((x) => (
+            <button key={x.q} className="chip-btn" onClick={x.go}>{x.q}</button>
+          ))}
+        </div>
+      )}
+
       {tab === 'learn' && <Learn />}
       {tab === 'compare' && sites.length > 0 && (
-        <Compare sites={sites} current={sel} start={start} days={days} store={{ scen, setScen, results, setResults }} />
+        <Compare sites={sites} current={sel} start={start} days={days} mast={mast} store={{ scen, setScen, results, setResults }} />
       )}
 
       {tab === 'explore' && (
@@ -232,8 +283,27 @@ export default function App() {
               </div>
             </div>
 
+            <div className="row">
+              <div>
+                <label>Antenna / panel mast</label>
+                <select value={mast} onChange={(e) => setMast(+e.target.value)}>
+                  {MASTS.map((m) => (
+                    <option key={m} value={m}>{m} m above ground</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>Battery lasts</label>
+                <select value={battery} onChange={(e) => setBattery(+e.target.value)}>
+                  {BATTERIES.map((b) => (
+                    <option key={b.h} value={b.h}>{b.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <label>Click the map to pick any south-pole location</label>
-            <PoleMap sites={sites} selected={sel} onPick={setSel} />
+            <PoleMap sites={sites} selected={sel} onPick={setSel} layer={layer} onLayer={setLayer} />
             <p className="hint">Shaded relief rendered from LRO LOLA elevation data (75°S to the pole). Drag to pan; use the + / − buttons (top right of the map) to zoom.</p>
           </aside>
 
@@ -261,7 +331,7 @@ export default function App() {
 
             {a && (
               <>
-                <MetricCards a={a} />
+                <MetricCards a={a} batteryHours={battery} />
 
                 <div className="panel">
                   <div className="panel-head">
@@ -287,7 +357,10 @@ export default function App() {
                 <div className="panel">
                   <div className="panel-head">
                     <h3>Operational windows</h3>
-                    <span className="hint">green = sunlight and Earth at the same time</span>
+                    <span className="hint">
+                      green = sunlight and Earth at the same time{' '}
+                      <button className="ghost small" onClick={exportCsv} disabled={!a.track}>⬇ CSV</button>
+                    </span>
                   </div>
                   <Timeline rows={[{ label: sel?.name ?? '', a }]} cursor={now} />
                 </div>

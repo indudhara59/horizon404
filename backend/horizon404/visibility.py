@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 import numpy as np
 
 from .ephem import SUN_ANGULAR_RADIUS_DEG, sky_track
+from .dem import load_dem
 from .horizon import horizon_mask
 
 DARK_THRESHOLD = 0.01  # less than 1 % of the solar disk visible = dark
@@ -48,6 +49,11 @@ def _hours_until_change(mask: np.ndarray, step_h: float) -> float | None:
 def _windows(mask: np.ndarray, times: list[datetime]) -> list[list[str]]:
     iso = lambda t: t.isoformat().replace("+00:00", "Z")  # noqa: E731
     return [[iso(times[i]), iso(times[min(j, len(times) - 1)])] for i, j in _runs(mask)]
+
+
+def _slope(lat: float, lon: float) -> float | None:
+    v = load_dem().slope_at(lat, lon)
+    return round(v, 1) if np.isfinite(v) else None
 
 
 def rating(both_pct: float) -> str:
@@ -110,6 +116,7 @@ def analyze(
         "window": {"start": tr.to_dict()["times"][0], "days": days, "step_minutes": step_minutes},
         "terrain": mask.terrain,
         "site_height_m": round(mask.site_height_m, 1),
+        "slope_deg": _slope(lat, lon) if mask.terrain else None,
         "metrics": metrics,
         "windows": {
             "sunlit": _windows(sunlit, tr.times),
@@ -138,12 +145,13 @@ def best_dates(
     months: int = 12,
     mission_days: float = 14.0,
     step_hours: float = 3.0,
+    observer_height_m: float = 2.0,
 ) -> list[dict]:
     """Rank landing dates (one per day) by power+comms % over a mission length."""
     if start.tzinfo is None:
         start = start.replace(tzinfo=timezone.utc)
     total_days = months * 30.44 + mission_days
-    mask = horizon_mask(lat, lon)
+    mask = horizon_mask(lat, lon, observer_height_m)
     tr = sky_track(lat, lon, start, total_days, step_hours * 60)
     sunlit = disk_fraction(tr.sun_el - mask.at(tr.sun_az), SUN_ANGULAR_RADIUS_DEG) > DARK_THRESHOLD
     both = (sunlit & (tr.earth_el > mask.at(tr.earth_az))).astype(float)

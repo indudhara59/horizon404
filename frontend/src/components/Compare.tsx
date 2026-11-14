@@ -23,6 +23,7 @@ interface Props {
   current: Selection | null
   start: string
   days: number
+  mast: number
 }
 
 const MAX = 4
@@ -33,13 +34,13 @@ function shiftDate(d: string, days: number): string {
   return t.toISOString().slice(0, 10)
 }
 
-export default function Compare({ sites, current, start, days, store }: Props) {
+export default function Compare({ sites, current, start, days, mast, store }: Props) {
   const { scen, setScen, results, setResults } = store
   const [err, setErr] = useState<string | null>(null)
   const [pickId, setPickId] = useState(sites[0]?.id ?? '')
   const [pickDate, setPickDate] = useState(start)
 
-  const key = (s: Scenario) => `${s.sel.lat},${s.sel.lon},${s.start},${days}`
+  const key = (s: Scenario) => `${s.sel.lat},${s.sel.lon},${s.start},${days},${mast}`
 
   // seed with the current site + a 2-week slip, which is the classic planning question
   useEffect(() => {
@@ -57,12 +58,12 @@ export default function Compare({ sites, current, start, days, store }: Props) {
       const k = key(s)
       if (results[k]) return
       api
-        .analyze(s.sel.lat, s.sel.lon, `${s.start}T00:00:00Z`, days, false)
+        .analyze(s.sel.lat, s.sel.lon, `${s.start}T00:00:00Z`, days, false, mast)
         .then((r) => setResults((prev) => ({ ...prev, [k]: r })))
         .catch((e: Error) => setErr(e.message))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scen, days])
+  }, [scen, days, mast])
 
   const add = (s: Scenario) => scen.length < MAX && setScen([...scen, s])
   const ready = scen.map((s) => results[key(s)]).filter(Boolean)
@@ -75,6 +76,7 @@ export default function Compare({ sites, current, start, days, store }: Props) {
     { label: 'Earth in view', get: (a) => a.metrics.earth_visible_pct, fmt: (v) => `${v.toFixed(0)}%`, higher: true },
     { label: 'Longest night', get: (a) => a.metrics.longest_dark_hours, fmt: (v) => fmtDuration(v), higher: false },
     { label: 'Longest comms blackout', get: (a) => a.metrics.longest_comms_gap_hours, fmt: (v) => fmtDuration(v), higher: false },
+    { label: 'Landing slope', get: (a) => a.slope_deg ?? NaN, fmt: (v) => (Number.isNaN(v) ? 'n/a' : `${v.toFixed(1)}°`), higher: false },
     { label: 'Solar power index', get: (a) => a.metrics.mean_power_index * 100, fmt: (v) => `${v.toFixed(0)}%`, higher: true },
   ]
 
@@ -82,7 +84,7 @@ export default function Compare({ sites, current, start, days, store }: Props) {
     <section className="panel">
       <div className="panel-head">
         <h2>Compare scenarios</h2>
-        <span className="hint">Up to {MAX} site / date combinations, {days.toFixed(1)}-day window each</span>
+        <span className="hint">Up to {MAX} site / date combinations, {days.toFixed(1)}-day window each, {mast} m mast</span>
       </div>
 
       <div className="compare-add">
@@ -128,7 +130,7 @@ export default function Compare({ sites, current, start, days, store }: Props) {
             <tbody>
               {rows.map((r) => {
                 const vals = scen.map((s) => (results[key(s)] ? r.get(results[key(s)]) : null))
-                const nums = vals.filter((v): v is number => v !== null)
+                const nums = vals.filter((v): v is number => v !== null && !Number.isNaN(v))
                 const best = nums.length ? (r.higher ? Math.max(...nums) : Math.min(...nums)) : null
                 return (
                   <tr key={r.label}>

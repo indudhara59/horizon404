@@ -34,6 +34,22 @@ export default function Learn() {
             one. Try <b>Compare</b>: the same site, 14 days apart, can differ by tens of percentage points.
           </p>
         </div>
+        <div>
+          <h3>📡 A few metres of height help a lot</h3>
+          <p>
+            When the Sun is 1° above the horizon, raising a solar panel or antenna lifts it over nearby bumps. At the
+            pole itself, a <b>20 m mast</b> instead of 2 m raises the best two-week power + comms from about 61% to
+            97%. Try the mast setting in Explore.
+          </p>
+        </div>
+        <div>
+          <h3>⛰️ Flat ground keeps you upright</h3>
+          <p>
+            Landers tolerate slopes of roughly 8–10°. <b>IM-1 Odysseus</b> (2024) touched down on a ~12° slope, caught
+            a leg and tipped over. Horizon404 computes slope from LOLA at every site, and the <b>Slope</b> map layer
+            shows safe and steep ground.
+          </p>
+        </div>
       </div>
       <h2>How Horizon404 computes this</h2>
       <ol className="method">
@@ -50,8 +66,15 @@ export default function Learn() {
           the skyline means direct-to-Earth communication. Both at once is the headline number.
         </li>
         <li>
-          Sites north of 75°S use a smooth horizon (outside the polar elevation model). Values are for a 2 m mast by
-          default.
+          <b>Map layers</b>: the same calculation run on a 3 km grid around the pole (13,400 points, 12 months, 3 h
+          steps), checked against the full engine at known sites. Slope is computed from LOLA over a 240 m baseline.
+        </li>
+        <li>
+          <b>Night survival</b> compares the longest continuous darkness with how long your battery lasts.
+        </li>
+        <li>
+          Sites north of 75°S use a smooth horizon (outside the polar elevation model). Values are for a 2 m mast unless you
+          choose another height.
         </li>
       </ol>
     </section>

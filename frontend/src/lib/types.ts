@@ -64,10 +64,11 @@ export interface Track {
 export type Window = [string, string]
 
 export interface Analysis {
-  site: { lat: number; lon: number }
+  site: { lat: number; lon: number; observer_height_m: number }
   window: { start: string; days: number; step_minutes: number }
   terrain: boolean
   site_height_m: number
+  slope_deg: number | null
   metrics: Metrics
   windows: { sunlit: Window[]; earth: Window[]; both: Window[] }
   horizon: Horizon
@@ -78,4 +79,29 @@ export interface BestDate {
   date: string
   power_and_comms_pct: number
   sunlit_pct: number
+}
+
+export interface LayerGrid {
+  x0: number
+  y0: number
+  dx: number
+  nx: number
+  ny: number
+  scale: number
+  data: string // base64 uint8, row 0 = y0 (bottom), 255 = no data
+}
+
+export interface Layer {
+  label: string
+  unit: string
+  legend: [number, string][]
+  grid: LayerGrid
+}
+
+export type LayerKey = 'both' | 'sunlit' | 'earth' | 'slope'
+
+export interface LayerSet {
+  window: { start: string; days: number; step_minutes: number }
+  image_extent: { x: [number, number]; y: [number, number] }
+  layers: Record<LayerKey, Layer>
 }

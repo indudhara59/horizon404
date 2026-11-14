@@ -61,3 +61,14 @@ export const baseLayout = {
 }
 
 export const plotConfig: Partial<Config> = { displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }
+
+/** Trigger a CSV download in the browser. */
+export function downloadCsv(name: string, rows: (string | number)[][], comments: string[] = []): void {
+  const text = [...comments, ...rows.map((r) => r.join(','))].join('\n')
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}

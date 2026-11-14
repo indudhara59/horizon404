@@ -64,3 +64,9 @@ def test_exact_pole_matches_nearby_point():
     b = analyze(-89.999, 0.0, t0, days=14, include_track=False)["metrics"]
     assert a["power_and_comms_pct"] == b["power_and_comms_pct"]
     assert a["earth_visible_pct"] == b["earth_visible_pct"]
+
+
+def test_slope_flat_floor_vs_crater_wall():
+    dem = load_dem()
+    assert dem.slope_at(-89.66, 129.2) < 10  # Shackleton floor is flat
+    assert dem.slope_at(-89.9, 129.2) > 20  # inner wall is steep

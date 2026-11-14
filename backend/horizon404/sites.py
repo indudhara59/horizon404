@@ -46,7 +46,7 @@ SITES = [
         "name": "IM-1 Odysseus (2024)",
         "lat": -80.13, "lon": 1.44,
         "group": "South pole",
-        "note": "First US landing since Apollo, Intuitive Machines, Feb 2024 (near Malapert A).",
+        "note": "First US landing since Apollo (Intuitive Machines, Feb 2024, near Malapert A). It came down on a ~12° slope, caught a leg and tipped onto its side; compare the slope here.",
         "source": "Published landing site",
     },
     {

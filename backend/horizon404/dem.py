@@ -82,6 +82,14 @@ class PolarDEM:
     def height_at(self, lat, lon):
         return self.height_at_xy(*self.latlon_to_xy(lat, lon))
 
+    def slope_at(self, lat, lon) -> float:
+        """Terrain slope (deg) over a 240 m baseline; NaN outside the grid."""
+        x, y = self.latlon_to_xy(lat, lon)
+        s = self.scale_m
+        zx = (self.height_at_xy(x + s, y) - self.height_at_xy(x - s, y)) / (2 * s)
+        zy = (self.height_at_xy(x, y + s) - self.height_at_xy(x, y - s)) / (2 * s)
+        return float(np.degrees(np.arctan(np.hypot(zx, zy))))
+
 
 @lru_cache(maxsize=2)
 def load_dem(name: str = "ldem_75s_120m") -> PolarDEM:
