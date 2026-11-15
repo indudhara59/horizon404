@@ -17,251 +17,422 @@
     --both: #36c46f;
     --bad: #f0645a;
     --accent: #7c8cff;
+    --ease: cubic-bezier(.2, .75, .2, 1);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: #000; color: var(--text); height: 100%; }
   body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
 
-  /* fixed 1920x1080 stage, scaled to fit the window */
-  .deck { position: fixed; inset: 0; display: grid; place-items: center; }
+  /* fixed 1920x1080 stage, scaled to fit the window; slides transition inside it */
+  .stage { position: fixed; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center; overflow: hidden; background: var(--bg); }
   .slide {
-    position: absolute; width: 1920px; height: 1080px; left: 50%; top: 50%;
-    transform-origin: center; padding: 96px 120px 88px;
+    position: absolute; inset: 0; padding: 92px 120px 96px;
     background:
       radial-gradient(1200px 700px at 85% -10%, rgba(124,140,255,.16), transparent 60%),
       radial-gradient(900px 600px at -10% 110%, rgba(54,196,111,.09), transparent 60%),
       var(--bg);
-    display: none; flex-direction: column; overflow: hidden;
+    display: flex; flex-direction: column; overflow: hidden;
+    opacity: 0; visibility: hidden; transform: translateX(80px) scale(.985);
+    transition: opacity .7s var(--ease), transform .8s var(--ease), visibility 0s linear .8s;
   }
-  .slide.on { display: flex; }
-  .kicker { font: 600 26px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 26px; }
-  h1 { font-size: 132px; line-height: 1; letter-spacing: -.035em; font-weight: 800; }
-  h2 { font-size: 68px; line-height: 1.06; letter-spacing: -.025em; font-weight: 780; max-width: 1560px; }
+  .slide.on { opacity: 1; visibility: visible; transform: none; transition: opacity .7s var(--ease), transform .8s var(--ease), visibility 0s; z-index: 2; }
+  .slide.out-left { transform: translateX(-80px) scale(.985); }
+  .slide.out-right { transform: translateX(80px) scale(.985); }
+
+  /* entrance animations, replayed every time a slide is shown */
+  .a { opacity: 0; }
+  .slide.play .a { animation: rise .8s var(--ease) both; animation-delay: var(--d, 0ms); }
+  .slide.play .a.pop { animation-name: pop; }
+  .slide.play .a.left { animation-name: fromLeft; }
+  .slide.play .a.right { animation-name: fromRight; }
+  @keyframes rise { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: none; } }
+  @keyframes pop { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+  @keyframes fromLeft { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: none; } }
+  @keyframes fromRight { from { opacity: 0; transform: translateX(80px) perspective(2200px) rotateY(-14deg); } to { opacity: .96; transform: perspective(2200px) rotateY(-14deg) rotateX(4deg); } }
+
+  .kicker { font: 600 26px/1.4 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 22px; }
+  h1 { font-size: 140px; line-height: 1; letter-spacing: -.035em; font-weight: 800; }
+  h2 { font-size: 68px; line-height: 1.06; letter-spacing: -.025em; font-weight: 780; max-width: 1600px; }
   p, li { font-size: 34px; line-height: 1.38; color: var(--muted); }
   b, strong { color: var(--text); font-weight: 650; }
   .sun { color: var(--sun); } .earth { color: var(--earth); } .both { color: var(--both); } .bad { color: var(--bad); }
-  .foot { position: absolute; left: 120px; right: 120px; bottom: 40px; display: flex; justify-content: space-between; font: 22px/1 ui-monospace, Menlo, monospace; color: #55607a; }
+  .foot { position: absolute; left: 120px; right: 120px; bottom: 36px; display: flex; justify-content: space-between; font: 22px/1 ui-monospace, Menlo, monospace; color: #55607a; }
   .shot { border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.55); display: block; }
-  .row { display: flex; gap: 64px; align-items: center; flex: 1; min-height: 0; }
-  .col { flex: 1; min-width: 0; }
-  ul { list-style: none; display: grid; gap: 26px; }
-  ul li { padding-left: 44px; position: relative; }
-  ul li::before { content: ""; position: absolute; left: 0; top: 18px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); }
-  ul.sun-b li::before { background: var(--sun); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; }
 
   /* 1 title */
   .title { justify-content: center; }
-  .title .sub { font-size: 46px; color: var(--text); margin-top: 26px; font-weight: 500; }
+  .title .kicker { max-width: 820px; }
+  .title .sub { font-size: 48px; color: var(--text); margin-top: 28px; font-weight: 500; line-height: 1.25; }
   .title .lead { margin-top: 30px; max-width: 820px; }
-  .title .kicker { max-width: 820px; line-height: 1.4; }
   .title .hero { position: absolute; right: -170px; top: 170px; width: 1000px; transform: perspective(2200px) rotateY(-14deg) rotateX(4deg); opacity: .96; }
-  .links { margin-top: 56px; display: grid; gap: 14px; font: 30px/1.3 ui-monospace, Menlo, monospace; }
+  .links { margin-top: 52px; display: grid; gap: 14px; font: 30px/1.3 ui-monospace, Menlo, monospace; }
   .links span { color: var(--muted); display: inline-block; width: 120px; }
   .links a { color: var(--text); text-decoration: none; border-bottom: 2px solid var(--accent); }
-  .team { margin-top: 56px; font-size: 28px; color: var(--muted); }
+  .team { margin-top: 52px; font-size: 28px; color: var(--muted); }
+  .stars { position: absolute; inset: 0; pointer-events: none; }
+  .stars i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #cbd5e1; opacity: .25; animation: twinkle 3.2s ease-in-out infinite; }
+  @keyframes twinkle { 50% { opacity: .9; } }
 
   /* 2 problem */
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 60px; }
-  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 40px 40px 36px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 52px; }
+  .stat { padding: 40px 40px 36px; }
   .stat .n { font-size: 96px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
   .stat p { margin-top: 18px; font-size: 30px; }
-  .quote { margin-top: 56px; font-size: 38px; color: var(--text); border-left: 6px solid var(--accent); padding-left: 32px; max-width: 1500px; }
+  .problem-bottom { flex: 1; display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 48px; margin-top: 40px; min-height: 0; }
+  .quote { align-self: center; font-size: 38px; line-height: 1.4; color: var(--text); border-left: 6px solid var(--accent); padding-left: 32px; }
+  .scene { width: 100%; height: 100%; display: block; }
+  .scene .sunball { animation: sink 7s ease-in-out infinite; }
+  .scene .ray { stroke-dasharray: 14 12; animation: dash 1.2s linear infinite; }
+  @keyframes sink { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(46px); } }
+  @keyframes dash { to { stroke-dashoffset: -26; } }
 
   /* 3 solution */
-  .steps { display: grid; gap: 30px; }
+  .row { display: flex; gap: 64px; align-items: flex-start; flex: 1; min-height: 0; margin-top: 44px; }
+  .col { flex: 1; min-width: 0; }
+  .steps { display: grid; gap: 34px; }
   .step { display: grid; grid-template-columns: 64px 1fr; gap: 24px; align-items: start; }
   .step i { font-style: normal; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--panel); border: 2px solid var(--accent); font: 700 30px/1 ui-monospace, Menlo, monospace; color: var(--text); }
-  .step p { font-size: 31px; }
+  .step p { font-size: 32px; }
 
   /* 4 method */
-  .pipe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 64px; align-items: stretch; }
-  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 34px 32px; position: relative; margin-right: 52px; }
-  .box:last-child { margin-right: 0; border-color: var(--both); }
-  .box:not(:last-child)::after { content: "→"; position: absolute; right: -46px; top: 50%; transform: translateY(-50%); font-size: 44px; color: var(--accent); }
-  .box h3 { font-size: 34px; margin-bottom: 14px; }
-  .box p { font-size: 26px; line-height: 1.35; }
-  .box .tag { font: 600 20px/1 ui-monospace, Menlo, monospace; color: var(--accent); letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 16px; }
-  .checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 56px; }
-  .check { border-top: 3px solid var(--both); padding-top: 22px; }
-  .check .n { font-size: 54px; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
-  .check p { font-size: 27px; margin-top: 8px; }
+  .pipe { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 60px; align-items: stretch; flex: 1; max-height: 440px; }
+  .box { padding: 40px 36px; position: relative; margin-right: 56px; display: flex; flex-direction: column; }
+  .box:last-child { margin-right: 0; border-color: var(--both); box-shadow: 0 0 0 1px rgba(54,196,111,.25), 0 20px 60px rgba(54,196,111,.12); }
+  .box:not(:last-child)::after { content: "→"; position: absolute; right: -50px; top: 50%; transform: translateY(-50%); font-size: 46px; color: var(--accent); }
+  .slide.play .box:not(:last-child)::after { animation: nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge { 50% { transform: translate(8px, -50%); } }
+  .box .ico { font-size: 64px; line-height: 1; margin-bottom: 26px; }
+  .box h3 { font-size: 38px; margin-bottom: 16px; }
+  .box p { font-size: 28px; line-height: 1.38; }
+  .box .tag { font: 600 20px/1 ui-monospace, Menlo, monospace; color: var(--accent); letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 14px; }
+  .checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: auto; }
+  .check { border-top: 3px solid var(--both); padding-top: 24px; }
+  .check .n { font-size: 72px; font-weight: 800; color: var(--text); letter-spacing: -.02em; line-height: 1.05; }
+  .check p { font-size: 28px; margin-top: 10px; }
 
   /* 5 stories */
-  .cards4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 48px; flex: 1; }
-  .story { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 36px 40px; display: flex; flex-direction: column; }
+  .cards4 { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: 1fr 1fr; gap: 30px; margin-top: 40px; flex: 1; min-height: 0; }
+  .story { padding: 34px 40px 32px; display: flex; flex-direction: column; }
   .story .q { font: 600 22px/1.2 ui-monospace, Menlo, monospace; color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
-  .story .a { font-size: 44px; font-weight: 750; color: var(--text); margin-top: 18px; letter-spacing: -.015em; line-height: 1.12; }
-  .story p { font-size: 27px; margin-top: 14px; }
+  .story .ans { font-size: 46px; font-weight: 750; color: var(--text); margin-top: 14px; letter-spacing: -.015em; line-height: 1.1; }
+  .story p { font-size: 26px; margin-top: 10px; }
+  .bars { margin-top: auto; display: grid; gap: 12px; padding-top: 18px; }
+  .bar { display: grid; grid-template-columns: 190px 1fr 92px; align-items: center; gap: 16px; font-size: 24px; color: var(--muted); }
+  .bar .v { color: var(--text); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .track { height: 20px; border-radius: 10px; background: #18213a; position: relative; overflow: visible; }
+  .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 10px; width: var(--w); }
+  .slide.play .fill { animation: grow 1.2s var(--ease) both; animation-delay: var(--d, 400ms); }
+  @keyframes grow { from { width: 0; } }
+  .limit { position: absolute; top: -8px; bottom: -8px; width: 3px; background: #fff; opacity: .7; border-radius: 2px; }
+  .limit span { position: absolute; top: -28px; left: -30px; font-size: 18px; white-space: nowrap; color: #cbd5e1; }
 
   /* 6 visuals */
   .gallery { display: grid; grid-template-columns: 0.62fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 26px; margin-top: 40px; flex: 1; min-height: 0; }
   .g { position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
-  .g img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .g img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; transition: transform 6s ease-out; }
+  .slide.play .g img { transform: scale(1.06); }
   .g span { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 22px 16px; font-size: 25px; font-weight: 600; color: #fff; background: linear-gradient(transparent, rgba(3,6,14,.92)); }
   .g.tall { grid-row: span 2; }
 
   /* 7 impact */
-  .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 56px; }
-  .who div { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 34px 36px; }
-  .who h3 { font-size: 34px; margin-bottom: 12px; }
-  .who p { font-size: 27px; }
-  .cta { margin-top: 72px; display: flex; align-items: center; justify-content: space-between; gap: 40px; background: linear-gradient(90deg, rgba(124,140,255,.18), rgba(54,196,111,.12)); border: 1px solid var(--line); border-radius: 26px; padding: 40px 48px; }
-  .cta .big { font-size: 54px; font-weight: 800; letter-spacing: -.02em; }
+  .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 52px; flex: 1; min-height: 0; max-height: 470px; }
+  .who > div { padding: 40px 40px; display: flex; flex-direction: column; }
+  .who .ico { font-size: 60px; line-height: 1; margin-bottom: 24px; }
+  .who h3 { font-size: 40px; margin-bottom: 16px; }
+  .who p { font-size: 29px; }
+  .who ul { list-style: none; display: grid; gap: 10px; }
+  .who li { font-size: 28px; padding-left: 30px; position: relative; }
+  .who li::before { content: ""; position: absolute; left: 0; top: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+  .cta { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 40px; background: linear-gradient(90deg, rgba(124,140,255,.18), rgba(54,196,111,.12)); border: 1px solid var(--line); border-radius: 26px; padding: 40px 48px; }
+  .cta .big { font-size: 60px; font-weight: 800; letter-spacing: -.02em; }
   .cta .links { margin-top: 0; }
+  .credits { margin-top: 22px; font-size: 24px; }
 
-  /* nav */
+  /* nav + progress */
+  .progress { position: fixed; left: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--accent), var(--both)); transition: width .6s var(--ease); z-index: 6; }
   .nav { position: fixed; right: 16px; bottom: 14px; display: flex; gap: 8px; align-items: center; z-index: 5; font: 14px ui-monospace, Menlo, monospace; color: #8792aa; }
   .nav button { background: rgba(20,28,48,.9); color: #e8edf7; border: 1px solid #2a3654; border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
   .nav button:hover { border-color: var(--accent); }
 
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .slide.on { transition: none; transform: none; }
+    .a, .slide.play .a { animation: none; opacity: 1; }
+    .slide.play .fill { animation: none; }
+    .scene .sunball, .scene .ray, .stars i { animation: none; }
+  }
+
   @media print {
     @page { size: 1920px 1080px; margin: 0; }
     html, body { overflow: visible; height: auto; background: var(--bg); }
-    .deck { position: static; display: block; }
-    .slide { display: flex !important; position: relative; left: 0; top: 0; transform: none !important; page-break-after: always; break-after: page; }
-    .nav { display: none; }
+    .stage { position: static; transform: none !important; overflow: visible; width: 1920px; height: auto; }
+    .slide { position: relative; width: 1920px; height: 1080px; opacity: 1 !important; visibility: visible !important; transform: none !important; transition: none !important; page-break-after: always; break-after: page; }
+    .a { opacity: 1 !important; animation: none !important; }
+    .title .hero { opacity: .96 !important; }
+    .fill, .slide.play .fill { animation: none !important; }
+    .scene .sunball, .scene .ray, .stars i { animation: none !important; }
+    .nav, .progress { display: none; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
 <body>
-<main class="deck" id="deck">
+<div class="progress" id="progress"></div>
+<main class="stage" id="stage">
 
   <!-- 1 -->
   <section class="slide title">
-    <div class="kicker">NASA Space Apps 2026 · Lunar Landing Site Navigator</div>
-    <h1>Horizon404</h1>
-    <div class="sub">Will your lander see the <span class="sun">Sun</span> and the <span class="earth">Earth</span>?<br />And for how long?</div>
-    <p class="lead">Pick any spot near the Moon's south pole and a date. You get hour-by-hour sunlight, Earth contact, nights and slope in a few clicks. Computed from NASA terrain and JPL ephemerides.</p>
-    <div class="links">
+    <div class="stars" id="stars"></div>
+    <div class="kicker a">NASA Space Apps 2026 · Lunar Landing Site Navigator</div>
+    <h1 class="a">Horizon404</h1>
+    <div class="sub a">Will your lander see the <span class="sun">Sun</span> and the <span class="earth">Earth</span>?<br />And for how long?</div>
+    <p class="lead a">Pick any spot near the Moon's south pole and a date. You get hour-by-hour sunlight, Earth contact, nights and slope in a few clicks. Computed from NASA terrain and JPL ephemerides.</p>
+    <div class="links a">
       <div><span>Live</span><a href="https://horizon404.vercel.app">horizon404.vercel.app</a></div>
       <div><span>Code</span><a href="https://github.com/indudhara59/horizon404">github.com/indudhara59/horizon404</a></div>
     </div>
-    <div class="team">Team <b>Orbit404</b> · Hamburg</div>
-    <img class="shot hero" src="img/pole_top.webp" alt="Horizon404 app showing the geographic south pole" />
+    <div class="team a">Team <b>Orbit404</b> · Hamburg</div>
+    <img class="shot hero a right" style="--d: 250ms" src="img/pole_top.webp" alt="Horizon404 app showing the geographic south pole" />
   </section>
 
   <!-- 2 -->
   <section class="slide">
-    <div class="kicker">The problem</div>
-    <h2>At the south pole the Sun skims the horizon. A ridge 50 km away can switch a lander off.</h2>
+    <div class="kicker a">The problem</div>
+    <h2 class="a">At the south pole the Sun skims the horizon. A ridge 50 km away can switch a lander off.</h2>
     <div class="stats">
-      <div class="stat"><div class="n sun">~1.5°</div><p>Sun height at the pole. Long shadows; a few hundred metres of distance decide light or dark.</p></div>
-      <div class="stat"><div class="n earth">Low</div><p>Earth sits near the horizon too, so radio contact comes and goes with the terrain and the month.</p></div>
-      <div class="stat"><div class="n bad">IM-1</div><p>Feb 2024: landed on a ~12° slope near Malapert A, tipped over and ran short of power and comms.</p></div>
+      <div class="stat panel a pop"><div class="n sun">~1.5°</div><p>Sun height at the pole. Long shadows; a few hundred metres of distance decide light or dark.</p></div>
+      <div class="stat panel a pop"><div class="n earth">Low</div><p>Earth sits near the horizon too, so radio contact comes and goes with the terrain and the month.</p></div>
+      <div class="stat panel a pop"><div class="n bad">IM-1</div><p>Feb 2024: landed on a ~12° slope near Malapert A, tipped over and ran short of power and comms.</p></div>
     </div>
-    <p class="quote">The data exists (LOLA terrain, JPL ephemerides), but tools like Quickmap and Horizons are built for specialists. Mission planners and students need an answer in three clicks.</p>
+    <div class="problem-bottom">
+      <p class="quote a left">The data exists (LOLA terrain, JPL ephemerides), but tools like Quickmap and Horizons are built for specialists. Mission planners and students need an answer in three clicks.</p>
+      <div class="panel a" style="overflow: hidden">
+        <svg class="scene" viewBox="0 0 1000 330" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Low Sun hidden behind a distant ridge, lander in shadow">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05080f" /><stop offset="1" stop-color="#121a30" /></linearGradient>
+            <radialGradient id="glow"><stop offset="0" stop-color="#ffd76a" stop-opacity=".9" /><stop offset="1" stop-color="#ffd76a" stop-opacity="0" /></radialGradient>
+            <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4256" /><stop offset="1" stop-color="#1b2133" /></linearGradient>
+          </defs>
+          <rect width="1000" height="330" fill="url(#sky)" />
+          <g class="sunball"><circle cx="905" cy="150" r="60" fill="url(#glow)" /><circle cx="905" cy="150" r="20" fill="#ffd76a" /></g>
+          <!-- far ridge -->
+          <path d="M560 330 L560 214 L640 176 L700 150 L760 168 L820 190 L880 206 L1000 214 L1000 330 Z" fill="#2a3144" />
+          <!-- near terrain with the lander -->
+          <path d="M0 330 L0 236 L120 228 L220 232 L330 240 L460 244 L560 248 L660 260 L1000 266 L1000 330 Z" fill="url(#ground)" />
+          <!-- shadow cast by the ridge -->
+          <path d="M120 228 L220 232 L330 240 L460 244 L560 248 L560 256 L120 240 Z" fill="#000" opacity=".55" />
+          <line class="ray" x1="885" y1="152" x2="190" y2="216" stroke="#ffd76a" stroke-width="3" opacity=".8" />
+          <!-- lander -->
+          <g transform="translate(176 196)">
+            <rect x="0" y="0" width="30" height="22" rx="3" fill="#cbd5e1" />
+            <line x1="15" y1="0" x2="15" y2="-26" stroke="#cbd5e1" stroke-width="3" />
+            <circle cx="15" cy="-30" r="5" fill="#4ade80" />
+            <line x1="2" y1="22" x2="-8" y2="34" stroke="#cbd5e1" stroke-width="3" />
+            <line x1="28" y1="22" x2="38" y2="34" stroke="#cbd5e1" stroke-width="3" />
+          </g>
+          <text x="190" y="290" fill="#e8edf7" font-size="24" font-family="Inter, system-ui" text-anchor="middle">lander</text>
+          <text x="700" y="128" fill="#93a0b8" font-size="22" font-family="Inter, system-ui" text-anchor="middle">ridge 50 km away</text>
+          <text x="905" y="96" fill="#ffd76a" font-size="22" font-family="Inter, system-ui" text-anchor="middle">Sun ~1.5° up</text>
+          <text x="340" y="300" fill="#93a0b8" font-size="20" font-family="Inter, system-ui" text-anchor="middle">shadow: no power</text>
+        </svg>
+      </div>
+    </div>
     <div class="foot"><span>Horizon404 · Orbit404</span><span>2 / 7</span></div>
   </section>
 
   <!-- 3 -->
   <section class="slide">
-    <div class="kicker">What we built</div>
-    <h2>Pick a spot and a date. Horizon404 answers the mission questions.</h2>
-    <div class="row" style="margin-top: 40px; align-items: flex-start">
+    <div class="kicker a">What we built</div>
+    <h2 class="a">Pick a spot and a date. Horizon404 answers the mission questions.</h2>
+    <div class="row">
       <div class="col">
         <div class="steps">
-          <div class="step"><i>1</i><p><b>Power + comms %:</b> share of time with <span class="sun">sunlight</span> and <span class="earth">Earth in view</span> together.</p></div>
-          <div class="step"><i>2</i><p><b>Next sunset and Earthset</b>, the longest night, and whether your battery lasts it.</p></div>
-          <div class="step"><i>3</i><p><b>360° sky view</b>: Sun and Earth paths against the real terrain skyline.</p></div>
-          <div class="step"><i>4</i><p><b>Best landing dates</b> over 12 months, and <b>landing slope</b> safety.</p></div>
-          <div class="step"><i>5</i><p><b>Tweak the mission:</b> mast height, battery, window. Compare sites side by side.</p></div>
+          <div class="step a left"><i>1</i><p><b>Power + comms %:</b> share of time with <span class="sun">sunlight</span> and <span class="earth">Earth in view</span> together.</p></div>
+          <div class="step a left"><i>2</i><p><b>Next sunset and Earthset</b>, the longest night, and whether your battery lasts it.</p></div>
+          <div class="step a left"><i>3</i><p><b>360° sky view</b>: Sun and Earth paths against the real terrain skyline.</p></div>
+          <div class="step a left"><i>4</i><p><b>Best landing dates</b> over 12 months, and <b>landing slope</b> safety.</p></div>
+          <div class="step a left"><i>5</i><p><b>Tweak the mission:</b> mast height, battery, window. Compare sites side by side.</p></div>
         </div>
       </div>
-      <div class="col" style="flex: 0 0 740px"><img class="shot" style="width: 100%" src="img/im1_cards.webp" alt="Metric cards for IM-1 landing site" />
-        <img class="shot" style="width: 100%; margin-top: 28px" src="img/sky.webp" alt="360 degree sky view" /></div>
+      <div class="col" style="flex: 0 0 740px">
+        <img class="shot a pop" style="width: 100%" src="img/im1_cards.webp" alt="Metric cards for IM-1 landing site" />
+        <img class="shot a pop" style="width: 100%; margin-top: 28px" src="img/sky.webp" alt="360 degree sky view" />
+      </div>
     </div>
     <div class="foot"><span>Horizon404 · Orbit404</span><span>3 / 7</span></div>
   </section>
 
   <!-- 4 -->
   <section class="slide">
-    <div class="kicker">How it works</div>
-    <h2>Real terrain, real ephemerides, checked against JPL.</h2>
+    <div class="kicker a">How it works</div>
+    <h2 class="a">Real terrain, real ephemerides, checked against JPL.</h2>
     <div class="pipe">
-      <div class="box"><span class="tag">NASA LRO</span><h3>LOLA terrain</h3><p>LDEM_75S_120M: 120 m elevation model of everything south of 75°S.</p></div>
-      <div class="box"><span class="tag">Skyline</span><h3>Horizon mask</h3><p>720 rays out to 200 km from the site, with lunar curvature and mast height.</p></div>
-      <div class="box"><span class="tag">JPL / NAIF</span><h3>Sun &amp; Earth</h3><p>DE421 + lunar frame kernels (Skyfield): az/el every hour, libration included.</p></div>
-      <div class="box"><span class="tag">Result</span><h3>Visibility</h3><p>Fraction of the solar disk above the skyline; Earth above it; nights, windows, best dates.</p></div>
+      <div class="box panel a pop"><div class="ico">🛰️</div><span class="tag">NASA LRO</span><h3>LOLA terrain</h3><p>LDEM_75S_120M: 120 m elevation model of everything south of 75°S.</p></div>
+      <div class="box panel a pop"><div class="ico">⛰️</div><span class="tag">Skyline</span><h3>Horizon mask</h3><p>720 rays out to 200 km from the site, with lunar curvature and mast height.</p></div>
+      <div class="box panel a pop"><div class="ico">☀️</div><span class="tag">JPL / NAIF</span><h3>Sun &amp; Earth</h3><p>DE421 + lunar frame kernels (Skyfield): az/el every hour, libration included.</p></div>
+      <div class="box panel a pop"><div class="ico">✅</div><span class="tag">Result</span><h3>Visibility</h3><p>Share of the solar disk above the skyline; Earth above it; nights, windows, best dates.</p></div>
     </div>
     <div class="checks">
-      <div class="check"><div class="n">0.00001°</div><p>Max Sun/Earth position error vs JPL Horizons.</p></div>
-      <div class="check"><div class="n">18 tests</div><p>Incl. Apollo 11 (near side: Earth always up) and the exact pole.</p></div>
-      <div class="check"><div class="n">&lt; 1 s</div><p>Per analysis on the live site. Python · FastAPI · React · Three.js.</p></div>
+      <div class="check a"><div class="n">0.00001°</div><p>Max Sun/Earth position error vs JPL Horizons.</p></div>
+      <div class="check a"><div class="n">18 tests</div><p>Incl. Apollo 11 (near side: Earth always up) and the exact pole.</p></div>
+      <div class="check a"><div class="n">&lt; 1 s</div><p>Per analysis on the live site. Python · FastAPI · React · Three.js.</p></div>
     </div>
     <div class="foot"><span>Horizon404 · Orbit404</span><span>4 / 7</span></div>
   </section>
 
   <!-- 5 -->
   <section class="slide">
-    <div class="kicker">Demo: questions it answers</div>
-    <h2>Four stories, straight from the live app.</h2>
+    <div class="kicker a">Demo: questions it answers</div>
+    <h2 class="a">Four stories, straight from the live app.</h2>
     <div class="cards4">
-      <div class="story"><div class="q">Why did IM-1 Odysseus tip over?</div><div class="a"><span class="bad">11.6° slope</span> at its landing spot</div><p>Landers want less than 8–10°. Malapert's summit nearby: 1.8°. Horizon404 flags it as a hazard.</p></div>
-      <div class="story"><div class="q">Where is power + comms best?</div><div class="a">Malapert <span class="both">74%</span> vs ridge <span class="earth">45%</span></div><p>Lunar day from 14 Nov 2026. Both get full sun; Earth contact is what separates them.</p></div>
-      <div class="story"><div class="q">Launch slipped two weeks?</div><div class="a">Ridge, 14-day mission: <span class="both">78%</span> → <span class="bad">16%</span></div><p>Start 14 Nov vs 28 Nov 2026. Same site, Earth drops behind the terrain.</p></div>
-      <div class="story"><div class="q">Does a taller mast help at the pole?</div><div class="a">2 m → 20 m: <span class="sun">61%</span> → <span class="both">96%</span></div><p>Best 14-day window over the next year, power + comms together.</p></div>
+      <div class="story panel a pop">
+        <div class="q">Why did IM-1 Odysseus tip over?</div>
+        <div class="ans"><span class="bad">11.6° slope</span> at its landing spot</div>
+        <p>Landers want less than 8–10°. Horizon404 flags it as a hazard.</p>
+        <div class="bars">
+          <div class="bar"><span>IM-1 spot</span><div class="track"><div class="fill" style="--w: 77%; background: var(--bad)"></div><div class="limit" style="left: 66.6%"><span>10° limit</span></div></div><span class="v">11.6°</span></div>
+          <div class="bar"><span>Malapert top</span><div class="track"><div class="fill" style="--w: 12%; background: var(--both)"></div></div><span class="v">1.8°</span></div>
+        </div>
+      </div>
+      <div class="story panel a pop">
+        <div class="q">Where is power + comms best?</div>
+        <div class="ans">Malapert <span class="both">74%</span> vs ridge <span class="earth">45%</span></div>
+        <p>Lunar day from 14 Nov 2026. Both get full sun; Earth contact is what separates them.</p>
+        <div class="bars">
+          <div class="bar"><span>Malapert</span><div class="track"><div class="fill" style="--w: 74%; background: var(--both)"></div></div><span class="v">74%</span></div>
+          <div class="bar"><span>Ridge</span><div class="track"><div class="fill" style="--w: 45%; background: var(--earth)"></div></div><span class="v">45%</span></div>
+        </div>
+      </div>
+      <div class="story panel a pop">
+        <div class="q">Launch slipped two weeks?</div>
+        <div class="ans">Ridge, 14-day mission: <span class="both">78%</span> → <span class="bad">16%</span></div>
+        <p>Start 14 Nov vs 28 Nov 2026. Same site; Earth drops behind the terrain.</p>
+        <div class="bars">
+          <div class="bar"><span>Land 14 Nov</span><div class="track"><div class="fill" style="--w: 78%; background: var(--both)"></div></div><span class="v">78%</span></div>
+          <div class="bar"><span>Land 28 Nov</span><div class="track"><div class="fill" style="--w: 16%; background: var(--bad)"></div></div><span class="v">16%</span></div>
+        </div>
+      </div>
+      <div class="story panel a pop">
+        <div class="q">Does a taller mast help at the pole?</div>
+        <div class="ans">2 m → 20 m: <span class="sun">61%</span> → <span class="both">96%</span></div>
+        <p>Best 14-day window over the next year, power + comms together.</p>
+        <div class="bars">
+          <div class="bar"><span>2 m mast</span><div class="track"><div class="fill" style="--w: 61%; background: var(--sun)"></div></div><span class="v">61%</span></div>
+          <div class="bar"><span>20 m mast</span><div class="track"><div class="fill" style="--w: 96%; background: var(--both)"></div></div><span class="v">96%</span></div>
+        </div>
+      </div>
     </div>
     <div class="foot"><span>Horizon404 · Orbit404</span><span>5 / 7</span></div>
   </section>
 
   <!-- 6 -->
   <section class="slide">
-    <div class="kicker">See it, don't just read it</div>
-    <h2>Maps, a light-and-shadow movie, a year at a glance and 3D terrain.</h2>
+    <div class="kicker a">See it, don't just read it</div>
+    <h2 class="a">Maps, a light-and-shadow movie, a year at a glance and 3D terrain.</h2>
     <div class="gallery">
-      <div class="g tall"><img src="img/map.webp" alt="" /><span>Suitability maps: power + comms, sun, Earth, slope</span></div>
-      <div class="g"><img src="img/movie.webp" alt="" style="object-position: center 35%" /><span>Animated light &amp; shadow over a lunar day</span></div>
-      <div class="g"><img src="img/year.webp" alt="" /><span>Every hour of a year in one barcode</span></div>
-      <div class="g"><img src="img/best.webp" alt="" /><span>Best landing dates for 12 months</span></div>
-      <div class="g"><img src="img/windows.webp" alt="" style="object-fit: contain; background: #0f1629" /><span>Operational windows, CSV export, share links</span></div>
+      <div class="g tall a pop"><img src="img/map.webp" alt="" /><span>Suitability maps: power + comms, sun, Earth, slope</span></div>
+      <div class="g a pop"><img src="img/movie.webp" alt="" style="object-position: center 35%" /><span>Animated light &amp; shadow over a lunar day</span></div>
+      <div class="g a pop"><img src="img/year.webp" alt="" /><span>Every hour of a year in one barcode</span></div>
+      <div class="g a pop"><img src="img/best.webp" alt="" /><span>Best landing dates for 12 months</span></div>
+      <div class="g a pop"><img src="img/windows.webp" alt="" style="object-fit: contain; background: #0f1629" /><span>Operational windows, CSV export, share links</span></div>
     </div>
     <div class="foot"><span>Horizon404 · Orbit404</span><span>6 / 7</span></div>
   </section>
 
   <!-- 7 -->
   <section class="slide">
-    <div class="kicker">Impact</div>
-    <h2>Better landing decisions, earlier, for anyone.</h2>
+    <div class="kicker a">Impact</div>
+    <h2 class="a">Better landing decisions, earlier, for anyone.</h2>
     <div class="who">
-      <div><h3>Mission planners</h3><p>Screen candidate sites and launch dates before running heavy analysis.</p></div>
-      <div><h3>Students &amp; public</h3><p>Learn why the pole is hard with a Learn tab, guided questions and live "now" view.</p></div>
-      <div><h3>Next steps</h3><p>Rover traverse planning, thermal model, higher-res LOLA tiles, Artemis region presets.</p></div>
+      <div class="panel a pop"><div class="ico">🚀</div><h3>Mission planners</h3><p>Screen candidate sites and launch dates in seconds, before running heavy analysis. Share a link to any scenario.</p></div>
+      <div class="panel a pop"><div class="ico">🎓</div><h3>Students &amp; public</h3><p>See why the pole is hard: a Learn tab, guided questions and a live "now" view of the sky.</p></div>
+      <div class="panel a pop"><div class="ico">🧭</div><h3>Next steps</h3>
+        <ul><li>Rover traverse planning</li><li>Thermal model</li><li>Higher-res LOLA tiles</li><li>Artemis region presets</li></ul></div>
     </div>
-    <div class="cta">
+    <div class="cta a">
       <div class="big">Try it now</div>
       <div class="links">
         <div><span>Live</span><a href="https://horizon404.vercel.app">horizon404.vercel.app</a></div>
         <div><span>Code</span><a href="https://github.com/indudhara59/horizon404">github.com/indudhara59/horizon404</a></div>
       </div>
     </div>
-    <p style="margin-top: 26px; font-size: 24px">Data: NASA LRO LOLA LDEM_75S_120M (PDS) · JPL DE421 · NAIF lunar kernels · JPL Horizons (validation). Team Orbit404.</p>
+    <p class="credits a">Data: NASA LRO LOLA LDEM_75S_120M (PDS) · JPL DE421 · NAIF lunar kernels · JPL Horizons (validation). Team Orbit404.</p>
     <div class="foot"><span>Horizon404 · Orbit404</span><span>7 / 7</span></div>
   </section>
 
 </main>
 <div class="nav"><button id="prev" aria-label="Previous slide">←</button><span id="count">1 / 7</span><button id="next" aria-label="Next slide">→</button></div>
 <script>
+  const stage = document.getElementById('stage')
   const slides = [...document.querySelectorAll('.slide')]
-  let i = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1)) || 1) - 1))
+  let i = -1
+
+  // stagger the entrance animation of each slide's elements in document order
+  slides.forEach((s) => {
+    s.querySelectorAll('.a').forEach((el, k) => { if (!el.style.getPropertyValue('--d')) el.style.setProperty('--d', `${120 + k * 110}ms`) })
+    s.querySelectorAll('.fill').forEach((el, k) => el.style.setProperty('--d', `${700 + k * 120}ms`))
+  })
+
+  // twinkling stars on the title slide
+  const stars = document.getElementById('stars')
+  for (let k = 0; k < 90; k++) {
+    const st = document.createElement('i')
+    st.style.left = `${Math.random() * 100}%`
+    st.style.top = `${Math.random() * 100}%`
+    st.style.animationDelay = `${Math.random() * 3}s`
+    const z = 1 + Math.random() * 2.5
+    st.style.width = st.style.height = `${z}px`
+    stars.appendChild(st)
+  }
+
   const fit = () => {
     const s = Math.min(innerWidth / 1920, innerHeight / 1080)
-    slides.forEach((el) => (el.style.transform = `translate(-50%, -50%) scale(${s})`))
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`
   }
   const show = (n) => {
-    i = (n + slides.length) % slides.length
-    slides.forEach((el, k) => el.classList.toggle('on', k === i))
+    n = (n + slides.length) % slides.length
+    if (n === i) return
+    const forward = i < 0 || n > i
+    slides.forEach((el, k) => {
+      el.classList.remove('out-left', 'out-right')
+      if (k === n) return
+      if (el.classList.contains('on')) {
+        el.classList.remove('on')
+        el.classList.add(forward ? 'out-left' : 'out-right')
+      } else {
+        el.classList.add(forward ? 'out-right' : 'out-left')
+      }
+    })
+    const next = slides[n]
+    next.classList.remove('play')
+    void next.offsetWidth // restart the entrance animations
+    next.classList.add('on', 'play')
+    i = n
     document.getElementById('count').textContent = `${i + 1} / ${slides.length}`
+    document.getElementById('progress').style.width = `${((i + 1) / slides.length) * 100}%`
     history.replaceState(null, '', `#${i + 1}`)
   }
   addEventListener('resize', fit)
   addEventListener('keydown', (e) => {
-    if (['ArrowRight', 'PageDown', ' '].includes(e.key)) show(i + 1)
-    if (['ArrowLeft', 'PageUp'].includes(e.key)) show(i - 1)
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1) }
+    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1) }
+    if (e.key === 'Home') show(0)
+    if (e.key === 'End') show(slides.length - 1)
   })
   document.getElementById('next').onclick = () => show(i + 1)
   document.getElementById('prev').onclick = () => show(i - 1)
-  fit(); show(i)
+  stage.addEventListener('click', (e) => { if (!e.target.closest('a')) show(i + (e.clientX > innerWidth / 2 ? 1 : -1)) })
+  // swipe on touch screens
+  let x0 = null
+  addEventListener('touchstart', (e) => (x0 = e.touches[0].clientX), { passive: true })
+  addEventListener('touchend', (e) => {
+    if (x0 === null) return
+    const dx = e.changedTouches[0].clientX - x0
+    if (Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1))
+    x0 = null
+  })
+  fit()
+  show(Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1)) || 1) - 1)))
 </script>
 </body>
 </html>
