@@ -248,13 +248,18 @@ export default function App() {
             <p>Lunar Landing Site Navigator · will your lander see the Sun and Earth, and for how long?</p>
           </div>
         </div>
-        <nav>
-          {TABS.map((x) => (
-            <button key={x} className={tab === x ? 'active' : ''} onClick={() => setTab(x)}>
-              {x === 'explore' ? 'Explore' : x === 'compare' ? 'Compare' : 'Learn'}
-            </button>
-          ))}
-        </nav>
+        <div className="header-right">
+          <a className="deck-btn" href="/demo/" target="_blank" rel="noopener">
+            🎞️ Presentation
+          </a>
+          <nav>
+            {TABS.map((x) => (
+              <button key={x} className={tab === x ? 'active' : ''} onClick={() => setTab(x)}>
+                {x === 'explore' ? 'Explore' : x === 'compare' ? 'Compare' : 'Learn'}
+              </button>
+            ))}
+          </nav>
+        </div>
       </header>
 
       {err && <div className="error banner">{err}</div>}

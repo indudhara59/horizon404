@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<script>
+  // "/demo" without the trailing slash would load images from the site root; normalise first.
+  if (location.protocol.startsWith('http') && !location.pathname.endsWith('/'))
+    location.replace(location.pathname + '/' + location.search + location.hash)
+</script>
 <title>Horizon404 Demo</title>
 <meta name="description" content="Horizon404 by Team Orbit404: Lunar Landing Site Navigator, NASA Space Apps Challenge 2026. 7-slide demo." />
 <style>
@@ -154,6 +159,8 @@
   .nav { position: fixed; right: 16px; bottom: 14px; display: flex; gap: 8px; align-items: center; z-index: 5; font: 14px ui-monospace, Menlo, monospace; color: #8792aa; }
   .nav button { background: rgba(20,28,48,.9); color: #e8edf7; border: 1px solid #2a3654; border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
   .nav button:hover { border-color: var(--accent); }
+  .nav .app-link { color: #e8edf7; text-decoration: none; background: rgba(20,28,48,.9); border: 1px solid #2a3654; border-radius: 8px; padding: 8px 14px; margin-right: 6px; }
+  .nav .app-link:hover { border-color: var(--accent); }
 
   @media (prefers-reduced-motion: reduce) {
     .slide, .slide.on { transition: none; transform: none; }
@@ -361,7 +368,7 @@
   </section>
 
 </main>
-<div class="nav"><button id="prev" aria-label="Previous slide">←</button><span id="count">1 / 7</span><button id="next" aria-label="Next slide">→</button></div>
+<div class="nav"><a class="app-link" href="https://horizon404.vercel.app" target="_blank" rel="noopener">Open the app ↗</a><button id="prev" aria-label="Previous slide">←</button><span id="count">1 / 7</span><button id="next" aria-label="Next slide">→</button></div>
 <script>
   const stage = document.getElementById('stage')
   const slides = [...document.querySelectorAll('.slide')]
